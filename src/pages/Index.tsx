@@ -51,6 +51,7 @@ const Index = () => {
           </button>
         ))}
       </div>
+      </div>
       <HomeTabBar />
     </div>
   );
