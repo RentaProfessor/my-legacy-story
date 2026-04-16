@@ -35,7 +35,7 @@ const Index = () => {
       </div>
 
       {/* Actions pushed toward bottom with flex spacer */}
-      <div className="flex-1 min-h-8" />
+      <div className="flex-1 min-h-4 max-h-16" />
 
       <div className="w-full max-w-sm mx-auto space-y-3 pb-10">
         {actions.map((action) => (
