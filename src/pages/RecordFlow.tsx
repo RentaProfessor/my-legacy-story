@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, Plus, Mic, RotateCcw, Lock, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Plus, Mic, RotateCcw, Lock, Sparkles, Heart, Briefcase, Baby, Mail, Pen, BookHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
