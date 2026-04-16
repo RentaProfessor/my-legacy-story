@@ -3,7 +3,7 @@ import { Home, BookOpen, User, Book } from "lucide-react";
 
 const tabs = [
   { label: "Home", icon: Home, route: "/" },
-  { label: "Library", icon: BookOpen, route: "/creator-library" },
+  { label: "Library", icon: BookOpen, route: "/dashboard" },
   { label: "Book View", icon: Book, route: "/follow" },
   { label: "Profile", icon: User, route: "/creator-profile" },
 ];
