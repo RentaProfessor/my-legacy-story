@@ -91,10 +91,12 @@ const RecordFlow = () => {
             <h1 className="text-3xl font-bold text-foreground">About You</h1>
             <p className="text-muted-foreground text-[15px] leading-relaxed mt-2">Tell us a little about yourself.</p>
           </div>
-          <div className="flex-1 min-h-8" />
-          <div className="w-full max-w-sm mx-auto space-y-4 pb-10">
+          <div className="w-full max-w-sm mx-auto space-y-4 mt-6">
             <Input placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
             <Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
+          </div>
+          <div className="flex-1 min-h-8" />
+          <div className="w-full max-w-sm mx-auto pb-10">
             <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!name.trim() || !dob} onClick={() => setStep("familyCode")}>
               Continue
             </Button>
