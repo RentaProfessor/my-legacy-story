@@ -1,8 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { Mic, BookOpen, BookText } from "lucide-react";
+import { Mic, BookOpen, BookText, Plus } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
 import HomeTabBar from "@/components/HomeTabBar";
-import cassetteRecorder from "@/assets/cassette-recorder.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -11,14 +10,14 @@ const Index = () => {
     { label: "Follow a Loved One", icon: "BookOpen" as const, route: "/follow", desc: "Read their story" },
     { label: "Record a Book", icon: "Mic" as const, route: "/record?type=book", desc: "Voice to keepsake" },
     { label: "Record a Journal", icon: "BookText" as const, route: "/record?type=journal", desc: "Daily reflections" },
-    { label: "Set Up a Device", icon: "cassette" as const, route: "/device-setup", desc: "Connect recorder" },
+    { label: "Set Up a Device", icon: "Plus" as const, route: "/device-setup", desc: "Connect recorder" },
   ];
 
   const iconMap = {
     BookOpen: <BookOpen className="size-7 text-primary" />,
     Mic: <Mic className="size-7 text-primary" />,
     BookText: <BookText className="size-7 text-primary" />,
-    cassette: <img src={cassetteRecorder} alt="Cassette recorder" className="w-10 h-10 object-contain" />,
+    Plus: <Plus className="size-7 text-primary" />,
   };
 
   return (
