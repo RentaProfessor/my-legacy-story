@@ -1,40 +1,72 @@
 
 
-## Plan: Fix CreatorHome Layout
+## Plan: Revamp Creator Home with Stats, Progress, and Bottom Tab Bar
 
-### Problems
-1. **Header text too high** — `pt-14` pushes text into the safe area but doesn't vertically center it within the white bar
-2. **Buttons pinned to bottom** — `flex-1` spacer pushes all buttons to the very bottom instead of centering them in the remaining space
+### Overview
+Replace the current button list with a proper dashboard showing book progress, stats, and a bottom tab bar. The "Record" action moves to the bottom tab bar (not a card). Cards show book count, current book progress, etc.
+
+### New files
+
+**`src/components/BottomTabBar.tsx`**
+- Fixed bottom bar: Home, Library, Record, Profile
+- Icons: `Home`, `BookOpen`, `Mic`, `User`
+- Active tab highlighted based on current route
+- Glass style: `bg-card/80 backdrop-blur-md border-t`
+- `safe-bottom` padding
+
+**`src/components/ModeSwitch.tsx`**
+- Pill toggle: "Creator" / "Listener"
+- Navigates between `/creator-home` and `/dashboard`
+
+**`src/pages/CreatorLibrary.tsx`** — placeholder with BottomTabBar
+**`src/pages/CreatorProfile.tsx`** — placeholder with BottomTabBar
 
 ### Changes to `src/pages/CreatorHome.tsx`
 
-1. **Header**: Change padding to vertically center the text within the bar. Use `pt-16 pb-5` → replace with proper centering: keep `safe-top` but add more balanced padding so text sits in the visual center of the white bar (e.g. `pt-16 pb-6` or use flexbox centering).
+Replace the 4-button list with a dashboard layout:
 
-2. **Buttons section**: Replace the `flex-1` empty spacer + bottom-pinned buttons with a `flex-1 flex items-center` wrapper so the button group centers vertically in the remaining space below the header. Remove `pb-10` bottom-pinning.
+1. **Mode switch** in header area
+2. **Stats section** — cards showing:
+   - Total books: e.g. "2 Books" 
+   - Total chapters recorded: e.g. "7 Chapters"
+3. **Current book progress** — a card with:
+   - Book title (e.g. "My Life Story")
+   - Progress bar (e.g. 3/10 chapters)
+   - "Continue Recording" button
+4. **Quick actions** — "Set Up Device" card remains
+5. **BottomTabBar** at the bottom
 
-### Result layout
+Layout:
 ```text
 ┌──────────────────────┐
-│   (safe area inset)  │
-│                      │
-│  Welcome, Brett      │  ← centered in white bar
-│  Your creator dash   │
+│ [Creator ▪ Listener] │
+│  Welcome, Brett      │
 ├──────────────────────┤
 │                      │
-│   ┌──────────────┐   │
-│   │ Start Record │   │  ← vertically centered
-│   ├──────────────┤   │    in remaining space
-│   │ View Book    │   │
-│   ├──────────────┤   │
-│   │ Set Up Device│   │
-│   ├──────────────┤   │
-│   │ Settings     │   │
-│   └──────────────┘   │
+│  [2 Books] [7 Chaps] │  ← stat cards
 │                      │
+│  ┌─ Current Book ──┐ │
+│  │ My Life Story    │ │
+│  │ ████░░░░ 3/10   │ │  ← progress bar
+│  │ Continue Recording│ │
+│  └──────────────────┘ │
+│                      │
+│  ┌─ Set Up Device ──┐ │
+│  └──────────────────┘ │
+│                      │
+├──────────────────────┤
+│ Home Lib  Rec Profile│  ← bottom tab bar
 └──────────────────────┘
 ```
 
+### Routes added to `App.tsx`
+- `/creator-library` → CreatorLibrary
+- `/creator-profile` → CreatorProfile
+
 ### Technical details
-- Header: `pt-16 pb-6` for better vertical centering within the bar
-- Replace `<div className="flex-1" />` + bottom div with `<div className="flex-1 flex items-center"><div className="max-w-lg mx-auto w-full px-6 space-y-3">...</div></div>`
+- Stats use mock data for now (hardcoded)
+- Progress bar uses existing `Progress` component from `src/components/ui/progress.tsx`
+- Record tab in bottom bar navigates to `/record`
+- `pb-24` on main content to clear bottom bar
+- Bottom bar Record button is visually prominent (larger/colored icon)
 
