@@ -2,8 +2,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Home, BookOpen, Mic, User } from "lucide-react";
 
 const tabs = [
-  { label: "Home", icon: Home, route: "/creator-home" },
-  { label: "Library", icon: BookOpen, route: "/creator-library" },
+  { label: "Home", icon: Home, route: "/" },
+  { label: "Dashboard", icon: BookOpen, route: "/creator-home" },
   { label: "Record", icon: Mic, route: "/record" },
   { label: "Profile", icon: User, route: "/creator-profile" },
 ];
