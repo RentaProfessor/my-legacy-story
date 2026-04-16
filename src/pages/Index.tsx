@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Mic, BookOpen, BookText } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import BottomTabBar from "@/components/BottomTabBar";
+import HomeTabBar from "@/components/HomeTabBar";
 import cassetteRecorder from "@/assets/cassette-recorder.png";
 
 const Index = () => {
