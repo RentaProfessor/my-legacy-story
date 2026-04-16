@@ -52,7 +52,7 @@ const DeviceSetup = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center pb-20">
+      <div className="flex flex-col items-center text-center pt-10">
         {!scanning ? (
           <>
             <div className="w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm mb-5">
