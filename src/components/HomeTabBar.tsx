@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Home, User, Radio } from "lucide-react";
 
-const tabs = [
+const tabs: { label: string; icon: typeof Home; route: string | null; href?: string }[] = [
   { label: "Home", icon: Home, route: "/" },
   { label: "Buy Device", icon: Radio, route: null, href: "https://legacytape.com" },
   { label: "Profile", icon: User, route: "/creator-profile" },
@@ -15,11 +15,17 @@ const HomeTabBar = () => {
     <nav className="fixed bottom-0 left-0 right-0 border-t border-border/50 bg-card/80 backdrop-blur-md safe-bottom z-50">
       <div className="flex items-center justify-around h-16">
         {tabs.map((tab) => {
-          const active = location.pathname === tab.route;
+          const active = tab.route ? location.pathname === tab.route : false;
           return (
             <button
               key={tab.label}
-              onClick={() => navigate(tab.route)}
+              onClick={() => {
+                if (tab.href) {
+                  window.open(tab.href, "_blank", "noopener,noreferrer");
+                } else if (tab.route) {
+                  navigate(tab.route);
+                }
+              }}
               className="flex flex-col items-center gap-1 flex-1 pt-2 pb-1"
             >
               <tab.icon
