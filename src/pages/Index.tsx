@@ -14,17 +14,17 @@ const Index = () => {
   ];
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col px-6 safe-top safe-bottom">
+    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom">
       <SkyBackground />
 
-      {/* Top section with branding */}
-      <div className="pt-16 pb-6 text-center">
+      {/* Branding */}
+      <div className="pt-14 text-center">
         <img
           src={cassetteLogo}
           alt="LegacyTape"
           width={512}
           height={512}
-          className="mx-auto w-24 h-24 mb-4 object-contain"
+          className="mx-auto w-36 h-36 mb-3 object-contain"
         />
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
@@ -34,10 +34,11 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Actions pushed toward bottom with flex spacer */}
-      <div className="flex-1 min-h-4 max-h-16" />
+      {/* Small spacer */}
+      <div className="h-8" />
 
-      <div className="w-full max-w-sm mx-auto space-y-3 pb-10">
+      {/* Action buttons */}
+      <div className="w-full max-w-sm mx-auto space-y-3 pb-8">
         {actions.map((action) => (
           <button
             key={action.label}
