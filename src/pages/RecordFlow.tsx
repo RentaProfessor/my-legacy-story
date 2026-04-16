@@ -113,13 +113,14 @@ const RecordFlow = () => {
           </div>
           <div className="w-full flex justify-center mt-6">
             <InputOTP maxLength={6} value={familyCode} onChange={(val) => setFamilyCode(val)}>
-              <InputOTPGroup>
-                <InputOTPSlot index={0} />
-                <InputOTPSlot index={1} />
-                <InputOTPSlot index={2} />
-                <InputOTPSlot index={3} />
-                <InputOTPSlot index={4} />
-                <InputOTPSlot index={5} />
+              <InputOTPGroup className="gap-2">
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <InputOTPSlot
+                    key={i}
+                    index={i}
+                    className="h-12 w-12 rounded-xl border-2 border-border bg-card/80 backdrop-blur-sm text-lg font-semibold text-foreground"
+                  />
+                ))}
               </InputOTPGroup>
             </InputOTP>
           </div>
