@@ -65,7 +65,7 @@ const RecordFlow = () => {
       <div className="flex-1 overflow-y-auto px-6 pb-28 space-y-6">
         {/* Book Selection */}
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Books</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Pick a Book</h2>
 
           {books.length === 0 ? (
             <button
