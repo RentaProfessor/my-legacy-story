@@ -3,7 +3,7 @@ import { Home, User, Radio } from "lucide-react";
 
 const tabs: { label: string; icon: typeof Home; route: string | null; href?: string }[] = [
   { label: "Home", icon: Home, route: "/" },
-  { label: "Buy Device", icon: Radio, route: null, href: "https://legacytape.com" },
+  { label: "Buy Device", icon: Radio, route: null, href: "https://mylegacytape.com" },
   { label: "Profile", icon: User, route: "/creator-profile" },
 ];
 
