@@ -25,7 +25,7 @@ const Index = () => {
       <SkyBackground />
 
       {/* Header */}
-      <div className="pt-16 text-center">
+      <div className="text-center">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
         </h1>
