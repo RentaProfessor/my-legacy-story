@@ -125,7 +125,7 @@ const RecordFlow = () => {
           </div>
           <div className="flex-1 min-h-8" />
           <div className="w-full max-w-sm mx-auto pb-10">
-            <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!familyCode.trim()} onClick={() => setStep("device")}>
+            <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={familyCode.length !== 6} onClick={() => setStep("device")}>
               Continue
             </Button>
           </div>
