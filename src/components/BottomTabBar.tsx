@@ -4,7 +4,7 @@ import { Home, BookOpen, Mic, User } from "lucide-react";
 const tabs = [
   { label: "Home", icon: Home, route: "/creator-home" },
   { label: "Library", icon: BookOpen, route: "/creator-library" },
-  { label: "Record", icon: Mic, route: "/record", accent: true },
+  { label: "Record", icon: Mic, route: "/record" },
   { label: "Profile", icon: User, route: "/creator-profile" },
 ];
 
@@ -23,18 +23,12 @@ const BottomTabBar = () => {
               onClick={() => navigate(tab.route)}
               className="flex flex-col items-center gap-1 flex-1 pt-2 pb-1"
             >
-              {tab.accent ? (
-                <div className="w-11 h-11 -mt-5 rounded-full bg-primary flex items-center justify-center shadow-lg">
-                  <tab.icon className="size-5 text-primary-foreground" />
-                </div>
-              ) : (
-                <tab.icon
-                  className={`size-5 ${active ? "text-primary" : "text-muted-foreground"}`}
-                />
-              )}
+              <tab.icon
+                className={`size-5 ${active ? "text-primary" : "text-muted-foreground"}`}
+              />
               <span
                 className={`text-[10px] font-medium ${
-                  active || tab.accent ? "text-primary" : "text-muted-foreground"
+                  active ? "text-primary" : "text-muted-foreground"
                 }`}
               >
                 {tab.label}

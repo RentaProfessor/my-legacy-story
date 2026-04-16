@@ -4,6 +4,8 @@ import { ArrowLeft, BookOpen, Plus, Mic, RotateCcw, Lock, Sparkles, Heart, Brief
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import SkyBackground from "@/components/SkyBackground";
 import BottomTabBar from "@/components/BottomTabBar";
 
@@ -32,6 +34,8 @@ const RecordFlow = () => {
   const [showRerecord, setShowRerecord] = useState(false);
   const [guidedInterview, setGuidedInterview] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [customTopicName, setCustomTopicName] = useState("");
+  const [customQuestions, setCustomQuestions] = useState("");
 
   const topics = [
     { id: "life", label: "Life Story", icon: BookHeart },
@@ -97,7 +101,7 @@ const RecordFlow = () => {
                       <p className="font-semibold text-[15px] text-foreground">{book.title}</p>
                       <p className="text-[13px] text-muted-foreground">{book.chapters.length} chapters</p>
                     </div>
-                    <Progress value={(book.chapters.filter(c => c.recorded).length / Math.max(book.chapters.length, 1)) * 100} className="w-16 h-1.5" />
+                    <Progress value={(book.chapters.filter(c => c.recorded).length / 12) * 100} className="w-16 h-1.5" />
                   </div>
                 </button>
               ))}
@@ -165,22 +169,41 @@ const RecordFlow = () => {
           </div>
 
           {guidedInterview && (
-            <div className="grid grid-cols-2 gap-2.5">
-              {topics.map((topic) => (
-                <button
-                  key={topic.id}
-                  onClick={() => setSelectedTopic(selectedTopic === topic.id ? null : topic.id)}
-                  className={`p-3.5 rounded-2xl border backdrop-blur-sm text-left active:opacity-80 transition-all flex items-center gap-3 ${
-                    selectedTopic === topic.id
-                      ? "border-primary bg-primary/10"
-                      : "border-border/60 bg-card/80"
-                  }`}
-                >
-                  <topic.icon className={`size-4 shrink-0 ${selectedTopic === topic.id ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className={`text-[13px] font-medium ${selectedTopic === topic.id ? "text-primary" : "text-foreground"}`}>{topic.label}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-2.5">
+                {topics.map((topic) => (
+                  <button
+                    key={topic.id}
+                    onClick={() => setSelectedTopic(selectedTopic === topic.id ? null : topic.id)}
+                    className={`h-16 rounded-2xl border backdrop-blur-sm active:opacity-80 transition-all flex flex-col items-center justify-center text-center gap-1 ${
+                      selectedTopic === topic.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border/60 bg-card/80"
+                    }`}
+                  >
+                    <topic.icon className={`size-4 ${selectedTopic === topic.id ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`text-[12px] font-medium ${selectedTopic === topic.id ? "text-primary" : "text-foreground"}`}>{topic.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {selectedTopic === "custom" && (
+                <div className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm space-y-3">
+                  <Input
+                    placeholder="Topic name"
+                    value={customTopicName}
+                    onChange={(e) => setCustomTopicName(e.target.value)}
+                    className="rounded-xl"
+                  />
+                  <Textarea
+                    placeholder="Enter your own questions, one per line..."
+                    value={customQuestions}
+                    onChange={(e) => setCustomQuestions(e.target.value)}
+                    className="rounded-xl min-h-[100px]"
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div className="p-4 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm opacity-50 pointer-events-none flex items-center gap-3">
