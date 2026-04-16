@@ -35,16 +35,18 @@ const Index = () => {
       </div>
 
       {/* Action grid */}
-      <div className="w-full max-w-sm mx-auto grid grid-cols-2 gap-3 mt-8 pb-10">
+      <div className="w-full max-w-sm mx-auto flex flex-col gap-3 mt-8 pb-10">
         {actions.map((action) => (
           <button
             key={action.label}
-            className="aspect-square rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 flex flex-col items-center justify-center p-5 text-center active:opacity-80 transition-opacity shadow-sm"
+            className="w-full rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center gap-4 px-5 py-4 text-left active:opacity-80 transition-opacity shadow-sm"
             onClick={() => navigate(action.route)}
           >
             {iconMap[action.icon]}
-            <p className="font-semibold text-[15px] text-foreground mt-3 leading-tight">{action.label}</p>
-            <p className="text-[12px] text-muted-foreground leading-tight mt-1">{action.desc}</p>
+            <div>
+              <p className="font-semibold text-[15px] text-foreground leading-tight">{action.label}</p>
+              <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+            </div>
           </button>
         ))}
       </div>
