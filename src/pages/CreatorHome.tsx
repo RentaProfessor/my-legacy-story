@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Mic, BookOpen, Radio, Settings } from "lucide-react";
+import SkyBackground from "@/components/SkyBackground";
 
 const CreatorHome = () => {
   const location = useLocation();
@@ -14,7 +15,9 @@ const CreatorHome = () => {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-[hsl(210,50%,92%)] to-background">
+    <div className="min-h-[100dvh] relative">
+      <SkyBackground />
+
       <header className="border-b bg-card/80 backdrop-blur-md px-5 pt-14 pb-5 safe-top">
         <h1 className="text-2xl font-bold text-foreground">Welcome, {name}</h1>
         <p className="text-sm text-muted-foreground mt-1">Your creator dashboard</p>
@@ -25,7 +28,7 @@ const CreatorHome = () => {
           <button
             key={item.label}
             onClick={() => item.route && navigate(item.route)}
-            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/70 backdrop-blur-sm border border-border/50 text-left active:scale-[0.98] transition-all shadow-sm"
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 text-left active:opacity-80 transition-opacity shadow-sm"
           >
             <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <item.icon className="size-5 text-primary" />

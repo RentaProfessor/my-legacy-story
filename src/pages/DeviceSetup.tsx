@@ -11,15 +11,12 @@ const DeviceSetup = () => {
       <SkyBackground />
 
       <div className="w-full max-w-sm space-y-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors -ml-1"
-        >
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1">
           <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
         </button>
 
         <div className="space-y-3 text-center">
-          <div className="mx-auto w-20 h-20 rounded-2xl bg-primary/10 backdrop-blur-sm flex items-center justify-center border border-primary/20 float-gentle">
+          <div className="mx-auto w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm">
             <Radio className="size-9 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">Device Setup</h1>
@@ -29,12 +26,8 @@ const DeviceSetup = () => {
         </div>
 
         <div className="space-y-3">
-          <Button className="w-full h-13 text-base rounded-xl font-semibold">
-            Search for Device
-          </Button>
-          <Button variant="outline" className="w-full h-13 text-base rounded-xl" onClick={() => navigate("/")}>
-            Back to Home
-          </Button>
+          <Button className="w-full h-13 text-base rounded-xl font-semibold">Search for Device</Button>
+          <Button variant="outline" className="w-full h-13 text-base rounded-xl" onClick={() => navigate("/")}>Back to Home</Button>
         </div>
       </div>
     </div>

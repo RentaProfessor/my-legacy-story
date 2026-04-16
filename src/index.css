@@ -104,7 +104,7 @@
   }
 }
 
-/* Clouds animation */
+/* Clouds animation - background only */
 @keyframes drift {
   0% { transform: translateX(-10%); }
   50% { transform: translateX(10%); }
@@ -115,14 +115,8 @@
   50% { transform: translateX(-8%); }
   100% { transform: translateX(5%); }
 }
-@keyframes float-up {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0); }
-}
 
 .cloud-1 { animation: drift 25s ease-in-out infinite; }
 .cloud-2 { animation: drift-slow 30s ease-in-out infinite; }
 .cloud-3 { animation: drift 35s ease-in-out infinite; }
 .cloud-4 { animation: drift-slow 20s ease-in-out infinite; }
-.float-gentle { animation: float-up 6s ease-in-out infinite; }
