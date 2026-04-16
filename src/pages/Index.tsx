@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Mic, Newspaper, Radio } from "lucide-react";
+import { Mic, Newspaper, Radio, BookOpen } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import cassetteLogo from "@/assets/cassette-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -13,41 +14,45 @@ const Index = () => {
   ];
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-6 safe-bottom">
+    <div className="relative flex min-h-[100dvh] flex-col px-6 safe-top safe-bottom">
       <SkyBackground />
 
-      <div className="w-full max-w-sm space-y-10 text-center">
-        {/* Logo area - no floating animation */}
-        <div className="space-y-3">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm">
-            <BookOpen className="size-7 text-primary" />
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
-            LegacyTape
-          </h1>
-          <p className="text-muted-foreground text-base leading-relaxed max-w-[260px] mx-auto">
-            Turn spoken stories into books your family will treasure forever
-          </p>
-        </div>
+      {/* Top section with branding */}
+      <div className="pt-16 pb-6 text-center">
+        <img
+          src={cassetteLogo}
+          alt="LegacyTape"
+          width={512}
+          height={512}
+          className="mx-auto w-16 h-16 mb-4"
+        />
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          LegacyTape
+        </h1>
+        <p className="text-muted-foreground text-base leading-relaxed max-w-[260px] mx-auto mt-2">
+          Turn spoken stories into books your family will treasure forever
+        </p>
+      </div>
 
-        {/* Action buttons - no hover scale effects */}
-        <div className="space-y-3">
-          {actions.map((action) => (
-            <button
-              key={action.label}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 text-left active:opacity-80 transition-opacity shadow-sm"
-              onClick={() => navigate(action.route)}
-            >
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <action.icon className="size-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-[15px] text-foreground">{action.label}</p>
-                <p className="text-[13px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+      {/* Actions pushed toward bottom with flex spacer */}
+      <div className="flex-1 min-h-8" />
+
+      <div className="w-full max-w-sm mx-auto space-y-3 pb-10">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 text-left active:opacity-80 transition-opacity shadow-sm"
+            onClick={() => navigate(action.route)}
+          >
+            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <action.icon className="size-5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-[15px] text-foreground">{action.label}</p>
+              <p className="text-[13px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );

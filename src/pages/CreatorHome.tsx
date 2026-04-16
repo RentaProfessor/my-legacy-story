@@ -15,15 +15,17 @@ const CreatorHome = () => {
   ];
 
   return (
-    <div className="min-h-[100dvh] relative">
+    <div className="min-h-[100dvh] relative flex flex-col">
       <SkyBackground />
 
-      <header className="border-b bg-card/80 backdrop-blur-md px-5 pt-14 pb-5 safe-top">
+      <header className="border-b bg-card/80 backdrop-blur-md px-6 pt-14 pb-5 safe-top">
         <h1 className="text-2xl font-bold text-foreground">Welcome, {name}</h1>
         <p className="text-sm text-muted-foreground mt-1">Your creator dashboard</p>
       </header>
 
-      <div className="max-w-lg mx-auto px-5 py-6 space-y-3 safe-bottom">
+      <div className="flex-1" />
+
+      <div className="max-w-lg mx-auto w-full px-6 space-y-3 pb-10 safe-bottom">
         {items.map((item) => (
           <button
             key={item.label}
