@@ -11,6 +11,7 @@ import DeviceSetup from "./pages/DeviceSetup.tsx";
 import CreatorHome from "./pages/CreatorHome.tsx";
 import CreatorLibrary from "./pages/CreatorLibrary.tsx";
 import CreatorProfile from "./pages/CreatorProfile.tsx";
+import FollowerProfile from "./pages/FollowerProfile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/creator-home" element={<CreatorHome />} />
           <Route path="/creator-library" element={<CreatorLibrary />} />
           <Route path="/creator-profile" element={<CreatorProfile />} />
+          <Route path="/follower-profile" element={<FollowerProfile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

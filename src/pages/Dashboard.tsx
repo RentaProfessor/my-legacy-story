@@ -125,7 +125,7 @@ const Dashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
-      <FollowerTabBar />
+      <FollowerTabBar onBookView={() => openBookView(0)} />
     </div>
   );
 };
