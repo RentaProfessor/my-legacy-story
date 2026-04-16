@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Radio } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import BottomTabBar from "@/components/BottomTabBar";
 
 const DeviceSetup = () => {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ const DeviceSetup = () => {
         <Button className="w-full h-13 text-base rounded-xl font-semibold">Search for Device</Button>
         <Button variant="outline" className="w-full h-13 text-base rounded-xl" onClick={() => navigate("/")}>Back to Home</Button>
       </div>
+      <BottomTabBar />
     </div>
   );
 };

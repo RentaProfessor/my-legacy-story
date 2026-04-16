@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import FollowerTabBar from "@/components/FollowerTabBar";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ const FollowStory = () => {
   const canContinue = familyCode.trim() || lastName.trim();
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom">
+    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
       {/* Back button */}
@@ -98,6 +99,7 @@ const FollowStory = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <FollowerTabBar />
     </div>
   );
 };

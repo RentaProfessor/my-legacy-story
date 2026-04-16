@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Mic, BookOpen, BookText } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import BottomTabBar from "@/components/BottomTabBar";
 import cassetteRecorder from "@/assets/cassette-recorder.png";
 
 const Index = () => {
@@ -21,7 +22,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom">
+    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
       {/* Header */}
@@ -48,6 +49,7 @@ const Index = () => {
           </button>
         ))}
       </div>
+      <BottomTabBar />
     </div>
   );
 };
