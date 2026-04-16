@@ -110,9 +110,11 @@ const RecordFlow = () => {
             <h1 className="text-3xl font-bold text-foreground">Family Code</h1>
             <p className="text-muted-foreground text-[15px] leading-relaxed mt-2">Create a code so loved ones can follow along with your story as it grows.</p>
           </div>
-          <div className="flex-1 min-h-8" />
-          <div className="w-full max-w-sm mx-auto space-y-4 pb-10">
+          <div className="w-full max-w-sm mx-auto mt-6">
             <Input placeholder="Create a Family Code" value={familyCode} onChange={(e) => setFamilyCode(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
+          </div>
+          <div className="flex-1 min-h-8" />
+          <div className="w-full max-w-sm mx-auto pb-10">
             <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!familyCode.trim()} onClick={() => setStep("device")}>
               Continue
             </Button>
