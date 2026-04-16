@@ -67,9 +67,6 @@ const DeviceSetup = () => {
                 <Camera className="size-5" />
                 Open Scanner
               </Button>
-              <Button variant="outline" className="w-full h-13 text-base rounded-xl" onClick={() => navigate("/")}>
-                Back to Home
-              </Button>
             </div>
           </>
         ) : (
