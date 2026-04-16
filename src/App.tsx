@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard.tsx";
 import RecordFlow from "./pages/RecordFlow.tsx";
 import DeviceSetup from "./pages/DeviceSetup.tsx";
 import CreatorHome from "./pages/CreatorHome.tsx";
+import CreatorLibrary from "./pages/CreatorLibrary.tsx";
+import CreatorProfile from "./pages/CreatorProfile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
