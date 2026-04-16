@@ -31,6 +31,16 @@ const RecordFlow = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showRerecord, setShowRerecord] = useState(false);
   const [guidedInterview, setGuidedInterview] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  const topics = [
+    { id: "life", label: "Life Story", icon: BookHeart },
+    { id: "childhood", label: "Childhood & Family", icon: Baby },
+    { id: "love", label: "Love & Relationships", icon: Heart },
+    { id: "career", label: "Career", icon: Briefcase },
+    { id: "letters", label: "Letters to Family", icon: Mail },
+    { id: "custom", label: "Custom", icon: Pen },
+  ];
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col safe-top safe-bottom">
