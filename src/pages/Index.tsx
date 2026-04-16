@@ -49,7 +49,7 @@ const Index = () => {
           </button>
         ))}
       </div>
-      <BottomTabBar />
+      <HomeTabBar />
     </div>
   );
 };
