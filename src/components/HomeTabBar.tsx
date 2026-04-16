@@ -3,7 +3,7 @@ import { Home, User, Radio } from "lucide-react";
 
 const tabs = [
   { label: "Home", icon: Home, route: "/" },
-  { label: "Buy Device", icon: Radio, route: "/device-setup" },
+  { label: "Buy Device", icon: Radio, route: null, href: "https://legacytape.com" },
   { label: "Profile", icon: User, route: "/creator-profile" },
 ];
 
