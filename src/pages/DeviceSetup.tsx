@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Radio } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import BottomTabBar from "@/components/BottomTabBar";
 
 const DeviceSetup = () => {
   const navigate = useNavigate();
