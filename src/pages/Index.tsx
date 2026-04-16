@@ -24,7 +24,7 @@ const Index = () => {
     <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
-      {/* Header */}
+      {/* Header - pinned to top */}
       <div className="text-center pt-16">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
@@ -34,24 +34,25 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Action grid - centered in remaining space */}
-      <div className="flex-1 flex items-center">
-      <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            className="w-full rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center gap-4 px-5 py-4 text-left active:opacity-80 transition-opacity shadow-sm"
-            onClick={() => navigate(action.route)}
-          >
-            {iconMap[action.icon]}
-            <div>
-              <p className="font-semibold text-[15px] text-foreground leading-tight">{action.label}</p>
-              <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
-            </div>
-          </button>
-        ))}
+      {/* Buttons - vertically centered in remaining space */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              className="w-full rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center gap-4 px-5 py-4 text-left active:opacity-80 transition-opacity shadow-sm"
+              onClick={() => navigate(action.route)}
+            >
+              {iconMap[action.icon]}
+              <div>
+                <p className="font-semibold text-[15px] text-foreground leading-tight">{action.label}</p>
+                <p className="text-[12px] text-muted-foreground leading-tight mt-0.5">{action.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
-      </div>
+
       <HomeTabBar />
     </div>
   );
