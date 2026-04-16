@@ -18,9 +18,11 @@ const CreatorHome = () => {
     <div className="min-h-[100dvh] relative flex flex-col">
       <SkyBackground />
 
-      <header className="border-b bg-card/80 backdrop-blur-md px-6 pt-16 pb-6 safe-top text-center">
-        <h1 className="text-2xl font-bold text-foreground">Welcome, {name}</h1>
-        <p className="text-sm text-muted-foreground mt-1">Your creator dashboard</p>
+      <header className="border-b bg-card/80 backdrop-blur-md px-6 pt-safe-top">
+        <div className="py-8 text-center">
+          <h1 className="text-2xl font-bold text-foreground">Welcome, {name}</h1>
+          <p className="text-sm text-muted-foreground mt-1">Your creator dashboard</p>
+        </div>
       </header>
 
       <div className="flex-1 flex items-center">
