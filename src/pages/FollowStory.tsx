@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
 import {
-import {
   Dialog,
   DialogContent,
   DialogHeader,
