@@ -13,6 +13,7 @@ const RecordFlow = () => {
   const type = searchParams.get("type") || "book";
 
   const [step, setStep] = useState<Step>("whose");
+  const [whose, setWhose] = useState<"mine" | "other" | null>(null);
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [familyCode, setFamilyCode] = useState("");
