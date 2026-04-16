@@ -21,7 +21,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom pb-20">
+    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top">
       <SkyBackground />
 
       {/* Header - pinned to top */}
@@ -34,8 +34,10 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Buttons - vertically centered in remaining space */}
-      <div className="flex-1 flex items-center justify-center">
+      {/* Buttons - evenly spaced between header and tab bar */}
+      <div className="flex-1 flex flex-col pb-[calc(4rem+env(safe-area-inset-bottom,20px))]">
+        <div className="flex-1" />
+
         <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
           {actions.map((action) => (
             <button
@@ -51,6 +53,8 @@ const Index = () => {
             </button>
           ))}
         </div>
+
+        <div className="flex-1" />
       </div>
 
       <HomeTabBar />
