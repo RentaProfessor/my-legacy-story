@@ -21,11 +21,11 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20">
+    <div className="relative min-h-[100dvh] flex flex-col px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
       {/* Header */}
-      <div className="text-center mb-6">
+      <div className="text-center pt-16">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
         </h1>
@@ -34,8 +34,9 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Action grid */}
-      <div className="w-full max-w-sm mx-auto flex flex-col gap-3 pb-10">
+      {/* Action grid - centered in remaining space */}
+      <div className="flex-1 flex items-center">
+      <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
         {actions.map((action) => (
           <button
             key={action.label}
