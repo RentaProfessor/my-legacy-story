@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, User, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 import SkyBackground from "@/components/SkyBackground";
 
 type Step = "whose" | "name" | "familyCode" | "device";
