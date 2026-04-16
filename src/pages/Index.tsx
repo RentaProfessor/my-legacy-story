@@ -24,7 +24,7 @@ const Index = () => {
           alt="LegacyTape"
           width={512}
           height={512}
-          className="mx-auto w-16 h-16 mb-4"
+          className="mx-auto w-24 h-24 mb-4 object-contain"
         />
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
