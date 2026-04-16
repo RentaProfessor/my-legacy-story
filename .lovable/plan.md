@@ -1,37 +1,40 @@
 
 
-## Plan: Selectable Options with Continue Button on "Whose" Step
+## Plan: Fix CreatorHome Layout
 
-### Changes to `src/pages/RecordFlow.tsx`
+### Problems
+1. **Header text too high** — `pt-14` pushes text into the safe area but doesn't vertically center it within the white bar
+2. **Buttons pinned to bottom** — `flex-1` spacer pushes all buttons to the very bottom instead of centering them in the remaining space
 
-1. **Add `whose` selection state**: New state `const [whose, setWhose] = useState<"mine" | "other" | null>(null)`
-2. **Move options up**: Remove the `flex-1 min-h-8` spacer that pushes the cards to the bottom. Place the option cards right below the title with `mt-6`.
-3. **Make cards selectable (not navigating)**: On click, set `whose` state instead of calling `setStep("name")`. Add a visual selected state — highlighted border (`border-primary`) when selected, default border otherwise.
-4. **Add Continue button at bottom**: Add `flex-1` spacer after the cards, then a Continue button pinned to the bottom (`pb-10`), disabled until `whose` is selected. On click, advance to `setStep("name")`.
+### Changes to `src/pages/CreatorHome.tsx`
 
-### Layout for "whose" step
+1. **Header**: Change padding to vertically center the text within the bar. Use `pt-16 pb-5` → replace with proper centering: keep `safe-top` but add more balanced padding so text sits in the visual center of the white bar (e.g. `pt-16 pb-6` or use flexbox centering).
+
+2. **Buttons section**: Replace the `flex-1` empty spacer + bottom-pinned buttons with a `flex-1 flex items-center` wrapper so the button group centers vertically in the remaining space below the header. Remove `pb-10` bottom-pinning.
+
+### Result layout
 ```text
-← Back                Step 1 of 4
-                                  
-Record a Book                     
-Whose story would you like...     
-                                  
-┌─────────────────────────┐       
-│ 👤 Mine                 │  ← selectable
-│ Record your own story   │       
-└─────────────────────────┘       
-┌─────────────────────────┐       
-│ 👥 Someone Else's       │  ← selectable
-│ Help capture a loved... │       
-└─────────────────────────┘       
-                                  
-    ── flex spacer ──             
-                                  
-   [ Continue (disabled) ]        
+┌──────────────────────┐
+│   (safe area inset)  │
+│                      │
+│  Welcome, Brett      │  ← centered in white bar
+│  Your creator dash   │
+├──────────────────────┤
+│                      │
+│   ┌──────────────┐   │
+│   │ Start Record │   │  ← vertically centered
+│   ├──────────────┤   │    in remaining space
+│   │ View Book    │   │
+│   ├──────────────┤   │
+│   │ Set Up Device│   │
+│   ├──────────────┤   │
+│   │ Settings     │   │
+│   └──────────────┘   │
+│                      │
+└──────────────────────┘
 ```
 
 ### Technical details
-- Selected card: `border-primary bg-primary/5` ; unselected: `border-border/60 bg-card/80`
-- Continue button same style as other steps: `w-full h-13 text-base rounded-xl font-semibold`
-- `disabled={!whose}`
+- Header: `pt-16 pb-6` for better vertical centering within the bar
+- Replace `<div className="flex-1" />` + bottom div with `<div className="flex-1 flex items-center"><div className="max-w-lg mx-auto w-full px-6 space-y-3">...</div></div>`
 
