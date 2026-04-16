@@ -24,7 +24,7 @@ const FollowStory = () => {
   };
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col px-6 pt-16 safe-bottom">
+    <div className="relative flex min-h-[100dvh] flex-col justify-center px-6 safe-bottom safe-top">
       <SkyBackground />
 
       <div className="w-full max-w-sm mx-auto space-y-8">
