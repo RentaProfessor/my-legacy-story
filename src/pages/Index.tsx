@@ -21,7 +21,7 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20 -mt-8">
+    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
       {/* Header */}
