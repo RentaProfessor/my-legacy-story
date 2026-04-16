@@ -34,7 +34,7 @@ const Index = () => {
         </p>
       </div>
 
-      <div className="flex-1" />
+      <div className="h-10" />
 
       {/* Action grid */}
       <div className="w-full max-w-sm mx-auto flex flex-col gap-3 pb-10">
