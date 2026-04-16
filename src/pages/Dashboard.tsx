@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Eye, ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
+import SkyBackground from "@/components/SkyBackground";
 import {
   Dialog,
   DialogContent,
@@ -37,40 +38,31 @@ const Dashboard = () => {
   const totalPages = chapters[currentChapter]?.pages.length || 1;
 
   const goNext = () => {
-    if (currentPage < totalPages - 1) {
-      setCurrentPage((p) => p + 1);
-    } else if (currentChapter < chapters.length - 1) {
-      setCurrentChapter((c) => c + 1);
-      setCurrentPage(0);
-    }
+    if (currentPage < totalPages - 1) setCurrentPage((p) => p + 1);
+    else if (currentChapter < chapters.length - 1) { setCurrentChapter((c) => c + 1); setCurrentPage(0); }
   };
 
   const goPrev = () => {
-    if (currentPage > 0) {
-      setCurrentPage((p) => p - 1);
-    } else if (currentChapter > 0) {
-      setCurrentChapter((c) => c - 1);
-      setCurrentPage(chapters[currentChapter - 1].pages.length - 1);
-    }
+    if (currentPage > 0) setCurrentPage((p) => p - 1);
+    else if (currentChapter > 0) { setCurrentChapter((c) => c - 1); setCurrentPage(chapters[currentChapter - 1].pages.length - 1); }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStart === null) return;
     const diff = touchStart - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) {
-      diff > 0 ? goNext() : goPrev();
-    }
+    if (Math.abs(diff) > 50) { diff > 0 ? goNext() : goPrev(); }
     setTouchStart(null);
   };
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-[hsl(210,50%,92%)] to-background">
-      {/* Header */}
+    <div className="min-h-[100dvh] relative">
+      <SkyBackground />
+
       <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md px-4 py-3 safe-top">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground p-1 -ml-1">
+            <button onClick={() => navigate("/")} className="text-muted-foreground active:opacity-60 transition-opacity p-1 -ml-1">
               <ChevronLeft className="size-6" />
             </button>
             <div>
@@ -86,8 +78,7 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-lg mx-auto px-5 py-6 space-y-6 safe-bottom">
-        {/* Progress */}
-        <div className="p-4 rounded-2xl bg-card/70 backdrop-blur-sm border border-border/50 space-y-3">
+        <div className="p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50 space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground font-medium">Story Progress</span>
             <span className="font-bold text-primary">{progress}%</span>
@@ -96,22 +87,13 @@ const Dashboard = () => {
           <p className="text-xs text-muted-foreground">{chapters.length} chapters recorded</p>
         </div>
 
-        {/* Chapter List */}
         <div className="space-y-3">
           <h2 className="text-lg font-semibold text-foreground px-1">Chapters</h2>
           {chapters.map((ch, i) => (
-            <div
-              key={ch.id}
-              className="border border-border/50 rounded-2xl p-4 bg-card/70 backdrop-blur-sm space-y-2.5 active:scale-[0.99] transition-transform"
-            >
+            <div key={ch.id} className="border border-border/50 rounded-2xl p-4 bg-card/80 backdrop-blur-sm space-y-2.5">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold text-[15px] text-foreground leading-snug">{ch.title}</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1 text-primary text-[13px] shrink-0 h-8 rounded-lg"
-                  onClick={() => openBookView(i)}
-                >
+                <Button variant="ghost" size="sm" className="gap-1 text-primary text-[13px] shrink-0 h-8 rounded-lg" onClick={() => openBookView(i)}>
                   <Eye className="size-3.5" /> View
                 </Button>
               </div>
@@ -121,17 +103,12 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Book View Modal */}
       <Dialog open={bookViewOpen} onOpenChange={setBookViewOpen}>
         <DialogContent className="max-w-[calc(100%-2rem)] h-[85dvh] flex flex-col p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="px-5 pt-5 pb-3 border-b shrink-0">
             <DialogTitle className="text-base">{chapters[currentChapter]?.title}</DialogTitle>
           </DialogHeader>
-          <div
-            className="flex-1 overflow-y-auto px-6 py-6"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
+          <div className="flex-1 overflow-y-auto px-6 py-6" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             <p className="text-foreground leading-[1.8] text-[16px] whitespace-pre-line">
               {chapters[currentChapter]?.pages[currentPage]}
             </p>
@@ -140,16 +117,8 @@ const Dashboard = () => {
             <Button variant="ghost" size="sm" onClick={goPrev} disabled={currentChapter === 0 && currentPage === 0} className="rounded-lg">
               <ArrowLeft className="size-4 mr-1" /> Prev
             </Button>
-            <span className="text-xs text-muted-foreground font-medium">
-              {currentPage + 1} / {totalPages}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={goNext}
-              disabled={currentChapter === chapters.length - 1 && currentPage === totalPages - 1}
-              className="rounded-lg"
-            >
+            <span className="text-xs text-muted-foreground font-medium">{currentPage + 1} / {totalPages}</span>
+            <Button variant="ghost" size="sm" onClick={goNext} disabled={currentChapter === chapters.length - 1 && currentPage === totalPages - 1} className="rounded-lg">
               Next <ArrowRight className="size-4 ml-1" />
             </Button>
           </div>

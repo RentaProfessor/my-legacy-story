@@ -34,13 +34,10 @@ const RecordFlow = () => {
 
       <div className="w-full max-w-sm mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <button
-            onClick={goBack}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors -ml-1"
-          >
+          <button onClick={goBack} className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1">
             <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
           </button>
-          <span className="text-xs text-muted-foreground font-medium bg-muted px-2.5 py-1 rounded-full">
+          <span className="text-xs text-muted-foreground font-medium bg-card/80 backdrop-blur-sm px-2.5 py-1 rounded-full border border-border/50">
             Step {stepNumber} of 4
           </span>
         </div>
@@ -49,9 +46,7 @@ const RecordFlow = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">{title}</h1>
-              <p className="text-muted-foreground text-[15px] leading-relaxed">
-                Whose story would you like to record?
-              </p>
+              <p className="text-muted-foreground text-[15px] leading-relaxed">Whose story would you like to record?</p>
             </div>
             <div className="space-y-3">
               {[
@@ -60,7 +55,7 @@ const RecordFlow = () => {
               ].map((opt) => (
                 <button
                   key={opt.label}
-                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/70 backdrop-blur-sm border border-border/60 text-left active:scale-[0.98] transition-all hover:border-primary/30 shadow-sm"
+                  className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 text-left active:opacity-80 transition-opacity shadow-sm"
                   onClick={() => setStep("name")}
                 >
                   <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -80,29 +75,12 @@ const RecordFlow = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">About You</h1>
-              <p className="text-muted-foreground text-[15px] leading-relaxed">
-                Tell us a little about yourself.
-              </p>
+              <p className="text-muted-foreground text-[15px] leading-relaxed">Tell us a little about yourself.</p>
             </div>
             <div className="space-y-4">
-              <Input
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-13 text-[16px] rounded-xl bg-card/70 backdrop-blur-sm px-4"
-              />
-              <Input
-                type="date"
-                placeholder="Date of Birth"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="h-13 text-[16px] rounded-xl bg-card/70 backdrop-blur-sm px-4"
-              />
-              <Button
-                className="w-full h-13 text-base rounded-xl font-semibold"
-                disabled={!name.trim() || !dob}
-                onClick={() => setStep("familyCode")}
-              >
+              <Input placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
+              <Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
+              <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!name.trim() || !dob} onClick={() => setStep("familyCode")}>
                 Continue
               </Button>
             </div>
@@ -113,22 +91,11 @@ const RecordFlow = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">Family Code</h1>
-              <p className="text-muted-foreground text-[15px] leading-relaxed">
-                Create a code so loved ones can follow along with your story as it grows.
-              </p>
+              <p className="text-muted-foreground text-[15px] leading-relaxed">Create a code so loved ones can follow along with your story as it grows.</p>
             </div>
             <div className="space-y-4">
-              <Input
-                placeholder="Create a Family Code"
-                value={familyCode}
-                onChange={(e) => setFamilyCode(e.target.value)}
-                className="h-13 text-[16px] rounded-xl bg-card/70 backdrop-blur-sm px-4"
-              />
-              <Button
-                className="w-full h-13 text-base rounded-xl font-semibold"
-                disabled={!familyCode.trim()}
-                onClick={() => setStep("device")}
-              >
+              <Input placeholder="Create a Family Code" value={familyCode} onChange={(e) => setFamilyCode(e.target.value)} className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4" />
+              <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!familyCode.trim()} onClick={() => setStep("device")}>
                 Continue
               </Button>
             </div>
@@ -139,29 +106,16 @@ const RecordFlow = () => {
           <div className="space-y-6">
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">Connect a Device</h1>
-              <p className="text-muted-foreground text-[15px] leading-relaxed">
-                Record with our retro cassette device or skip and use just the app.
-              </p>
+              <p className="text-muted-foreground text-[15px] leading-relaxed">Record with our retro cassette device or skip and use just the app.</p>
             </div>
             <div className="space-y-3">
-              <Button
-                className="w-full h-13 text-base rounded-xl font-semibold"
-                onClick={() => navigate("/device-setup")}
-              >
+              <Button className="w-full h-13 text-base rounded-xl font-semibold" onClick={() => navigate("/device-setup")}>
                 Connect a Device
               </Button>
-              <Button
-                variant="outline"
-                className="w-full h-13 text-base rounded-xl font-semibold"
-                onClick={() => navigate("/creator-home", { state: { name } })}
-              >
+              <Button variant="outline" className="w-full h-13 text-base rounded-xl font-semibold" onClick={() => navigate("/creator-home", { state: { name } })}>
                 Skip for Now
               </Button>
-              <Button
-                variant="ghost"
-                className="w-full h-12 text-base text-primary font-semibold"
-                onClick={() => window.open("https://mylegacytape.com", "_blank")}
-              >
+              <Button variant="ghost" className="w-full h-12 text-base text-primary font-semibold" onClick={() => window.open("https://mylegacytape.com", "_blank")}>
                 Purchase a Device →
               </Button>
             </div>

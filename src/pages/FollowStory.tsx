@@ -17,15 +17,10 @@ const FollowStory = () => {
   const navigate = useNavigate();
   const [code, setCode] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
-
   const mockPerson = "Marlene Chiate";
 
   const handleContinue = () => {
     if (code.trim()) setShowConfirm(true);
-  };
-
-  const handleConfirm = () => {
-    navigate("/dashboard", { state: { name: mockPerson } });
   };
 
   return (
@@ -35,7 +30,7 @@ const FollowStory = () => {
       <div className="w-full max-w-sm mx-auto space-y-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors -ml-1"
+          className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1"
         >
           <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
         </button>
@@ -52,7 +47,7 @@ const FollowStory = () => {
             placeholder="Family Code / Last Name"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="h-13 text-[16px] rounded-xl bg-card/70 backdrop-blur-sm px-4"
+            className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4"
             onKeyDown={(e) => e.key === "Enter" && handleContinue()}
           />
           <Button
@@ -77,7 +72,7 @@ const FollowStory = () => {
             <Button variant="outline" className="h-12 rounded-xl flex-1" onClick={() => setShowConfirm(false)}>
               Cancel
             </Button>
-            <Button className="h-12 rounded-xl flex-1" onClick={handleConfirm}>
+            <Button className="h-12 rounded-xl flex-1" onClick={() => navigate("/dashboard", { state: { name: mockPerson } })}>
               Yes, Follow
             </Button>
           </DialogFooter>

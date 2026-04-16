@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { BookOpen, Mic, Newspaper, Radio } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
 
@@ -18,9 +17,9 @@ const Index = () => {
       <SkyBackground />
 
       <div className="w-full max-w-sm space-y-10 text-center">
-        {/* Logo area */}
-        <div className="space-y-3 float-gentle">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 backdrop-blur-sm flex items-center justify-center border border-primary/20">
+        {/* Logo area - no floating animation */}
+        <div className="space-y-3">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm">
             <BookOpen className="size-7 text-primary" />
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-foreground">
@@ -31,12 +30,12 @@ const Index = () => {
           </p>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons - no hover scale effects */}
         <div className="space-y-3">
           {actions.map((action) => (
             <button
               key={action.label}
-              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/70 backdrop-blur-sm border border-border/60 text-left active:scale-[0.98] transition-all hover:bg-card/90 hover:border-primary/30 shadow-sm"
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 text-left active:opacity-80 transition-opacity shadow-sm"
               onClick={() => navigate(action.route)}
             >
               <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
