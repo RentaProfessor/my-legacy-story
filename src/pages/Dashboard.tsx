@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Eye, ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import FollowerTabBar from "@/components/FollowerTabBar";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +57,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] relative">
+    <div className="min-h-[100dvh] relative pb-20">
       <SkyBackground />
 
       <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md px-4 pt-[env(safe-area-inset-top)] safe-top">
@@ -124,6 +125,7 @@ const Dashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <FollowerTabBar />
     </div>
   );
 };
