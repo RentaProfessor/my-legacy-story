@@ -1,60 +1,28 @@
 
 
-## Plan: Revamp Record Page as Recording Dashboard
+## Plan: Fix Topic Blocks, Custom Topic Input, Progress Bar, and Bottom Bar
 
-### What changes
-The `/record` route (RecordFlow.tsx) currently shows onboarding steps (whose story, name, family code, device). Since the creator has already completed onboarding, replace this entirely with a **Recording Screen** that serves as the hub for recording.
+### 1. Uniform topic blocks
+Make all 6 topic buttons the same fixed height (`h-16`) so they're visually uniform regardless of label length. Use `flex-col items-center justify-center text-center` layout with icon on top and label below.
 
-### New RecordFlow.tsx content
+### 2. Custom topic flow
+When "Custom" is selected, show an input area below the grid: a text input for the topic name and a textarea for custom questions, with a simple card-style container.
 
-**Header**: Back button + "Record" title
+### 3. Progress bar based on 12 chapters
+Change the progress calculation from `recorded/total` to `recorded/12` (12 = complete book). So 3 chapters = 25%, 6 = 50%, etc.
 
-**Book Selection Section**:
-- If no books exist: "Create Your First Book" card with a button
-- If books exist (mock 1-2 books): List of book cards showing title, chapter count, tap to select
-- "+ Create New Book" button at the bottom of the list
+### 4. Bottom bar — remove Record accent style
+Remove the `accent: true` property from the Record tab and the special floating circle rendering. Record icon will use the same style as Home, Library, Profile — just an icon that highlights when active.
 
-**Selected Book Actions** (shown after selecting a book):
-- "Record New Chapter" button (primary)
-- "Re-record a Chapter" button (outline) — shows list of existing chapters to pick from
-- Chapter list with status indicators
+### Files changed
 
-**Guided Interview Toggle**:
-- A switch/toggle row: "Guided Interview" with on/off state
-- When toggled on, show a card: "AI Interviewer — Coming Soon" with a subtle badge/lock icon, disabled state
+**`src/components/BottomTabBar.tsx`**
+- Remove `accent` property from Record tab
+- Remove the accent conditional rendering block — all tabs render the same way
 
-**Bottom Tab Bar**: Include the existing BottomTabBar component
-
-### Layout
-```text
-┌──────────────────────┐
-│ ← Back     Record    │
-├──────────────────────┤
-│                      │
-│  Your Books          │
-│  ┌─ My Life Story ─┐ │
-│  │ 3 chapters       │ │  ← tap to select
-│  └──────────────────┘ │
-│  ┌─ + Create New ───┐ │
-│  └──────────────────┘ │
-│                      │
-│  ┌─ Record New Ch. ─┐ │
-│  ┌─ Re-record Ch.  ─┐ │
-│                      │
-│  ── Guided Interview ─│
-│  [toggle]  AI Coming  │
-│    Soon 🔒            │
-│                      │
-├──────────────────────┤
-│ Home Lib  Rec Profile│
-└──────────────────────┘
-```
-
-### Technical details
-- Rewrite `src/pages/RecordFlow.tsx` completely — remove all onboarding steps
-- Mock data: 1 book "My Life Story" with 3 chapters
-- Use existing components: `Button`, `Switch`, `SkyBackground`, `BottomTabBar`
-- Selected book stored in local state
-- "AI Interviewer" button uses `opacity-50 pointer-events-none` with a "Coming Soon" badge
-- Back button navigates to `/creator-home`
+**`src/pages/RecordFlow.tsx`**
+- Topic buttons: add fixed `h-16`, change layout to `flex-col items-center justify-center text-center`
+- Add state: `customTopicName`, `customQuestions`
+- When `selectedTopic === "custom"`, render a card below the grid with an Input (topic name) and Textarea (questions)
+- Progress bar: change denominator from `book.chapters.length` to `12`
 
