@@ -28,6 +28,8 @@ const App = () => (
           <Route path="/record" element={<RecordFlow />} />
           <Route path="/device-setup" element={<DeviceSetup />} />
           <Route path="/creator-home" element={<CreatorHome />} />
+          <Route path="/creator-library" element={<CreatorLibrary />} />
+          <Route path="/creator-profile" element={<CreatorProfile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
