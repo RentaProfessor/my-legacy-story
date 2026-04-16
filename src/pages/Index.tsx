@@ -21,11 +21,11 @@ const Index = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20 -mt-8">
+    <div className="relative min-h-[100dvh] flex flex-col justify-center px-6 safe-top safe-bottom pb-20">
       <SkyBackground />
 
       {/* Header */}
-      <div className="text-center">
+      <div className="text-center -mt-8">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           LegacyTape
         </h1>
