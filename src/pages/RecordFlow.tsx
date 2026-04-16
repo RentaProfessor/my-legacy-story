@@ -126,7 +126,7 @@ const RecordFlow = () => {
 
             <Button
               className="w-full h-13 text-base rounded-xl font-semibold gap-2"
-              onClick={() => {}}
+              onClick={() => navigate("/recording-session")}
             >
               <Mic className="size-5" />
               Record New Chapter
