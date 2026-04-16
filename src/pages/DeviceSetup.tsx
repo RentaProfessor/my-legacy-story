@@ -7,7 +7,7 @@ const DeviceSetup = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-6 safe-bottom">
+    <div className="relative flex min-h-[100dvh] flex-col items-center justify-center px-6 safe-bottom safe-top">
       <SkyBackground />
 
       <div className="w-full max-w-sm space-y-8">
@@ -15,12 +15,12 @@ const DeviceSetup = () => {
           <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
         </button>
 
-        <div className="space-y-3 text-center">
+        <div className="space-y-4 text-center">
           <div className="mx-auto w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm">
             <Radio className="size-9 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">Device Setup</h1>
-          <p className="text-muted-foreground text-[15px] leading-relaxed">
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[280px] mx-auto">
             Turn on your LegacyTape recorder and make sure Bluetooth is enabled on this device.
           </p>
         </div>
