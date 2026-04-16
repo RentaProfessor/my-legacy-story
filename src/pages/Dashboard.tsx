@@ -59,18 +59,18 @@ const Dashboard = () => {
     <div className="min-h-[100dvh] relative">
       <SkyBackground />
 
-      <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md px-4 py-3 safe-top">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
+      <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-md px-4 pt-[env(safe-area-inset-top)] safe-top">
+        <div className="flex items-center justify-between max-w-lg mx-auto py-3.5">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/")} className="text-muted-foreground active:opacity-60 transition-opacity p-1 -ml-1">
               <ChevronLeft className="size-6" />
             </button>
-            <div>
+            <div className="pt-0.5">
               <h1 className="text-lg font-bold text-foreground leading-tight">{name}</h1>
               <p className="text-xs text-muted-foreground">Their story, your treasure</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-[13px] h-9" onClick={() => openBookView(0)}>
+          <Button variant="outline" size="sm" className="gap-1.5 rounded-xl text-[13px] h-9 self-center" onClick={() => openBookView(0)}>
             <BookOpen className="size-3.5" />
             Book View
           </Button>
