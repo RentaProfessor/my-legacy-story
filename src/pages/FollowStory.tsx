@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft } from "lucide-react";
+import SkyBackground from "@/components/SkyBackground";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +18,6 @@ const FollowStory = () => {
   const [code, setCode] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // Mock lookup result
   const mockPerson = "Marlene Chiate";
 
   const handleContinue = () => {
@@ -29,18 +29,20 @@ const FollowStory = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-8">
+    <div className="relative flex min-h-[100dvh] flex-col px-6 pt-16 safe-bottom">
+      <SkyBackground />
+
+      <div className="w-full max-w-sm mx-auto space-y-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors -ml-1"
         >
-          <ArrowLeft className="size-4" /> Back
+          <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
         </button>
 
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-foreground">Follow a Story</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-[15px] leading-relaxed">
             Enter a family code or last name to find their story.
           </p>
         </div>
@@ -50,28 +52,34 @@ const FollowStory = () => {
             placeholder="Family Code / Last Name"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="h-12 text-base"
+            className="h-13 text-[16px] rounded-xl bg-card/70 backdrop-blur-sm px-4"
             onKeyDown={(e) => e.key === "Enter" && handleContinue()}
           />
-          <Button className="w-full h-12 text-base" onClick={handleContinue} disabled={!code.trim()}>
+          <Button
+            className="w-full h-13 text-base rounded-xl font-semibold"
+            onClick={handleContinue}
+            disabled={!code.trim()}
+          >
             Continue
           </Button>
         </div>
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="max-w-xs">
+        <DialogContent className="max-w-[calc(100%-3rem)] rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Confirm</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl">Confirm</DialogTitle>
+            <DialogDescription className="text-[15px] leading-relaxed pt-1">
               Would you like to follow <span className="font-semibold text-foreground">{mockPerson}</span>'s story?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowConfirm(false)}>
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" className="h-12 rounded-xl flex-1" onClick={() => setShowConfirm(false)}>
               Cancel
             </Button>
-            <Button onClick={handleConfirm}>Yes, Follow</Button>
+            <Button className="h-12 rounded-xl flex-1" onClick={handleConfirm}>
+              Yes, Follow
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
