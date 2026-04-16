@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, BookOpen, Plus, Mic, RotateCcw, Lock, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, Plus, Mic, RotateCcw, Lock, Sparkles, Heart, Briefcase, Baby, Mail, Pen, BookHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
@@ -31,6 +31,16 @@ const RecordFlow = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showRerecord, setShowRerecord] = useState(false);
   const [guidedInterview, setGuidedInterview] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+
+  const topics = [
+    { id: "life", label: "Life Story", icon: BookHeart },
+    { id: "childhood", label: "Childhood & Family", icon: Baby },
+    { id: "love", label: "Love & Relationships", icon: Heart },
+    { id: "career", label: "Career", icon: Briefcase },
+    { id: "letters", label: "Letters to Family", icon: Mail },
+    { id: "custom", label: "Custom", icon: Pen },
+  ];
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col safe-top safe-bottom">
@@ -149,10 +159,29 @@ const RecordFlow = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Guided Interview</h2>
-              <p className="text-xs text-muted-foreground">Get prompted with questions</p>
+              <p className="text-xs text-muted-foreground">Choose a topic to guide your recording</p>
             </div>
             <Switch checked={guidedInterview} onCheckedChange={setGuidedInterview} />
           </div>
+
+          {guidedInterview && (
+            <div className="grid grid-cols-2 gap-2.5">
+              {topics.map((topic) => (
+                <button
+                  key={topic.id}
+                  onClick={() => setSelectedTopic(selectedTopic === topic.id ? null : topic.id)}
+                  className={`p-3.5 rounded-2xl border backdrop-blur-sm text-left active:opacity-80 transition-all flex items-center gap-3 ${
+                    selectedTopic === topic.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border/60 bg-card/80"
+                  }`}
+                >
+                  <topic.icon className={`size-4 shrink-0 ${selectedTopic === topic.id ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-[13px] font-medium ${selectedTopic === topic.id ? "text-primary" : "text-foreground"}`}>{topic.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="p-4 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-sm opacity-50 pointer-events-none flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent/50 flex items-center justify-center shrink-0">
