@@ -50,16 +50,20 @@ const RecordFlow = () => {
             <h1 className="text-3xl font-bold text-foreground">{title}</h1>
             <p className="text-muted-foreground text-[15px] leading-relaxed mt-2">Whose story would you like to record?</p>
           </div>
-          <div className="flex-1 min-h-8" />
-          <div className="w-full max-w-sm mx-auto space-y-3 pb-10">
+          <div className="w-full max-w-sm mx-auto space-y-3 mt-6">
             {[
-              { label: "Mine", desc: "Record your own story", icon: User },
-              { label: "Someone Else's", desc: "Help capture a loved one's story", icon: Users },
+              { key: "mine" as const, label: "Mine", desc: "Record your own story", icon: User },
+              { key: "other" as const, label: "Someone Else's", desc: "Help capture a loved one's story", icon: Users },
             ].map((opt) => (
               <button
-                key={opt.label}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/60 text-left active:opacity-80 transition-opacity shadow-sm"
-                onClick={() => setStep("name")}
+                key={opt.key}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl backdrop-blur-sm border text-left active:opacity-80 transition-all shadow-sm",
+                  whose === opt.key
+                    ? "border-primary bg-primary/5"
+                    : "border-border/60 bg-card/80"
+                )}
+                onClick={() => setWhose(opt.key)}
               >
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                   <opt.icon className="size-5 text-primary" />
@@ -70,6 +74,12 @@ const RecordFlow = () => {
                 </div>
               </button>
             ))}
+          </div>
+          <div className="flex-1 min-h-8" />
+          <div className="w-full max-w-sm mx-auto pb-10">
+            <Button className="w-full h-13 text-base rounded-xl font-semibold" disabled={!whose} onClick={() => setStep("name")}>
+              Continue
+            </Button>
           </div>
         </>
       )}
