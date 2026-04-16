@@ -31,45 +31,53 @@ const FollowStory = () => {
       <SkyBackground />
 
       {/* Back button */}
-      <div className="pt-14">
+      <div className="pt-14 pb-2">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1"
+          className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1 relative z-10"
         >
           <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
         </button>
       </div>
 
-      {/* Centered content */}
-      <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto -mt-14">
+      {/* Title */}
+      <div className="pt-6 pb-2">
         <h1 className="text-3xl font-bold text-foreground">Follow a Story</h1>
         <p className="text-muted-foreground text-[15px] leading-relaxed mt-2">
           Enter a family code or last name to find their story.
         </p>
+      </div>
 
-        <div className="space-y-3 mt-6">
-          <Input
-            placeholder="Family Code"
-            value={familyCode}
-            onChange={(e) => setFamilyCode(e.target.value)}
-            className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4"
-            onKeyDown={(e) => e.key === "Enter" && handleContinue()}
-          />
-          <Input
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4"
-            onKeyDown={(e) => e.key === "Enter" && handleContinue()}
-          />
-          <Button
-            className="w-full h-13 text-base rounded-xl font-semibold"
-            onClick={handleContinue}
-            disabled={!canContinue}
-          >
-            Continue
-          </Button>
-        </div>
+      {/* Inputs */}
+      <div className="space-y-3 mt-6 w-full max-w-sm mx-auto">
+        <Input
+          placeholder="Family Code"
+          value={familyCode}
+          onChange={(e) => setFamilyCode(e.target.value)}
+          className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4"
+          onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+        />
+        <Input
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+          className="h-13 text-[16px] rounded-xl bg-card/80 backdrop-blur-sm px-4"
+          onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+        />
+      </div>
+
+      {/* Spacer */}
+      <div className="flex-1 min-h-8" />
+
+      {/* Bottom action */}
+      <div className="w-full max-w-sm mx-auto pb-10">
+        <Button
+          className="w-full h-13 text-base rounded-xl font-semibold"
+          onClick={handleContinue}
+          disabled={!canContinue}
+        >
+          Continue
+        </Button>
       </div>
 
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
