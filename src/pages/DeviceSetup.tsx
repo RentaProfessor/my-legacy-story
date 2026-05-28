@@ -1,97 +1,1149 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Camera,
+  CheckCircle2,
+  Loader2,
+  Wifi,
+  WifiOff,
+  AlertCircle,
+  ChevronRight,
+  User,
+  Users,
+  Copy,
+  Check,
+  Heart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ScanLine, Camera, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import SkyBackground from "@/components/SkyBackground";
-import BottomTabBar from "@/components/BottomTabBar";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/AuthProvider";
+import { getQuestions } from "@/lib/onboardingQuestions";
+import { getProfile } from "@/lib/database";
+
+// Status bytes from the device's BLE status characteristic.
+const STATUS_LABEL: Record<number, string> = {
+  0x01: "Validating token…",
+  0x02: "Joining WiFi…",
+};
+
+const ERROR_MESSAGE: Record<number, string> = {
+  0xe1: "Token mismatch — please re-scan the QR code.",
+  0xe2: "Device couldn't read the payload — please try again.",
+  0xe3: "Wrong WiFi password or network unreachable.",
+  0xe4: "Device error — please try again.",
+};
+
+// State machine:
+// setupFor → bleConnecting ─┬─ wifiList → passwordEntry ─┐
+//                           ├─ wifiEntry (manual)         │
+//                           └─ bleFailed (retry / manual) │
+//                                                          ↓ (other: secondaryWifi →)
+//                                       saving → pairing → wifiConnecting
+//                                            → personInfo → survey
+//                                            → completing → done
+// If the device is already onboarded (re-pair), 0x03 jumps straight to `done`
+// without touching survey columns.
+type Step =
+  | "idle"
+  | "setupFor"
+  | "bleConnecting"
+  | "bleFailed"
+  | "wifiList"
+  | "wifiEntry"
+  | "passwordEntry"
+  | "secondaryWifi"
+  | "saving"
+  | "pairing"
+  | "wifiConnecting"
+  | "personInfo"
+  | "survey"
+  | "completing"
+  | "done"
+  | "error";
+
+interface QRData {
+  hardwareId: string;
+  token: string;
+}
+
+interface WifiNetwork {
+  ssid: string;
+  rssi: number;
+}
+
+declare global {
+  interface Window {
+    __nativePairingBridge?: boolean;
+    __pairingBridge?: {
+      startQRScan: () => void;
+      connectBLE: (opts: { hardwareId: string }) => void;
+      pair: (opts: {
+        hardwareId: string;
+        token: string;
+        ssid: string;
+        pw: string;
+        ssid2?: string;
+        pw2?: string;
+        acct: string;
+      }) => void;
+      cancel: () => void;
+    };
+    __onQRResult?: (data: QRData) => void;
+    __onQRError?: (msg: string) => void;
+    __onPairingStatus?: (byte: number) => void;
+    __onWifiList?: (networks: WifiNetwork[]) => void;
+    __pendingPairingQR?: QRData;
+  }
+}
+
+// ── WiFi signal-strength indicator ─────────────────────────────────────────────
+const WifiSignal = ({ rssi }: { rssi: number }) => {
+  const bars = rssi > -50 ? 4 : rssi > -60 ? 3 : rssi > -70 ? 2 : 1;
+  return (
+    <div className="flex items-end gap-[2px] h-[16px] shrink-0">
+      {[1, 2, 3, 4].map((b) => (
+        <div
+          key={b}
+          className={`w-1 rounded-sm ${b <= bars ? "bg-primary" : "bg-muted-foreground/25"}`}
+          style={{ height: `${b * 22 + 12}%` }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// ── Shared layout shell ────────────────────────────────────────────────────────
+
+const Shell = ({
+  children,
+  showBack,
+  onBack,
+}: {
+  children: React.ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
+}) => (
+  <div className="relative flex min-h-[100dvh] flex-col px-6 safe-top safe-bottom">
+    <SkyBackground />
+    {showBack && (
+      <div className="pt-14 pb-2">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="size-5" aria-hidden="true" />
+          <span className="text-[15px]">Back</span>
+        </button>
+      </div>
+    )}
+    <div className={`flex-1 flex flex-col ${showBack ? "pt-2" : "pt-14"} pb-6`}>
+      {children}
+    </div>
+  </div>
+);
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 const DeviceSetup = () => {
   const navigate = useNavigate();
-  const [scanning, setScanning] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const { user } = useAuth();
 
-  const handleScan = () => {
-    setScanning(true);
-    // Simulate a successful scan after 3 seconds
-    setTimeout(() => {
-      setScanning(false);
-      setConnected(true);
-    }, 3000);
+  const [step, setStep] = useState<Step>("idle");
+  const [qrData, setQrData] = useState<QRData | null>(null);
+
+  // Who is this for?
+  const [setupForValue, setSetupForValue] = useState<"self" | "other" | null>(null);
+
+  // WiFi network list (from device BLE scan) and the user's selection
+  const [wifiNetworks, setWifiNetworks] = useState<WifiNetwork[]>([]);
+  const [selectedSsid, setSelectedSsid] = useState("");
+
+  // Primary WiFi
+  const [ssid, setSsid] = useState("");
+  const [pw, setPw] = useState("");
+
+  // Optional secondary WiFi (other path)
+  const [ssid2, setSsid2] = useState("");
+  const [pw2, setPw2] = useState("");
+
+  // BLE status feedback
+  const [statusLabel, setStatusLabel] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  // Inline error shown above the password field when device rejects WiFi creds.
+  const [wifiError, setWifiError] = useState("");
+
+  // True if the QR-scanned device is already onboarded for this user, in which
+  // case 0x03 skips the survey/personInfo screens and jumps to `done`.
+  const [isRePair, setIsRePair] = useState(false);
+  const isRePairRef = useRef(false);
+
+  // Post-pairing onboarding state
+  const [subjectName, setSubjectName] = useState("");
+  const [subjectDob, setSubjectDob] = useState("");
+  const [surveyAnswers, setSurveyAnswers] = useState<string[]>(Array(10).fill(""));
+  const [surveyIndex, setSurveyIndex] = useState(0);
+
+  // Family code shown on the done screen for the "other" path so the setter
+  // can share it with relatives who want to follow the loved one's stories.
+  const [familyCode, setFamilyCode] = useState<string>("");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Keep a ref to setupForValue so the BLE callback closure can read it.
+  const setupForRef = useRef<"self" | "other" | null>(null);
+  // Refs read inside the (mount-once) BLE status callback so the latest values
+  // are visible without stale closures.
+  const wifiNetworksRef = useRef<WifiNetwork[]>([]);
+
+  const hasNative = !!window.__nativePairingBridge;
+
+  // ── Native → JS callbacks ─────────────────────────────────────────────────
+
+  // Detect re-pair: if this hardware_id already has a completed onboarding for
+  // this user, mark the flow so we skip the survey/personInfo screens and avoid
+  // overwriting their existing answers.
+  const checkExistingDevice = async (hardwareId: string) => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("devices")
+      .select("onboarding_complete, setup_for, subject_name, subject_dob")
+      .eq("hardware_id", hardwareId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (data?.onboarding_complete) {
+      setIsRePair(true);
+      // Pre-populate so the done screen renders the right "X's stories" copy.
+      if (data.setup_for) setSetupForValue(data.setup_for as "self" | "other");
+      if (data.subject_name) setSubjectName(data.subject_name);
+      if (data.subject_dob) setSubjectDob(data.subject_dob);
+    } else {
+      setIsRePair(false);
+    }
   };
 
-  if (connected) {
+  useEffect(() => {
+    window.__onQRResult = (data: QRData) => {
+      setQrData(data);
+      checkExistingDevice(data.hardwareId);
+      setStep("setupFor");
+    };
+
+    window.__onQRError = (msg: string) => {
+      if (msg === "cancelled") return;
+      setErrorMessage(msg);
+      setStep("error");
+    };
+
+    window.__onPairingStatus = (byte: number) => {
+      if (byte === 0x03) {
+        // Re-pair: device already had a completed onboarding — skip survey,
+        // preserve existing answers, jump straight to done.
+        if (isRePairRef.current) {
+          setStep("done");
+          return;
+        }
+        setStep("personInfo");
+        return;
+      }
+      // Wrong WiFi password — let the user fix it without re-scanning the QR.
+      if (byte === 0xe3) {
+        setWifiError(ERROR_MESSAGE[0xe3]);
+        setPw("");
+        setStep(wifiNetworksRef.current.length > 0 ? "passwordEntry" : "wifiEntry");
+        return;
+      }
+      if (byte >= 0xe0) {
+        setErrorMessage(ERROR_MESSAGE[byte] ?? "Unknown device error.");
+        setStep("error");
+        return;
+      }
+      const label = STATUS_LABEL[byte];
+      if (label) {
+        setStatusLabel(label);
+        setStep(byte === 0x01 ? "pairing" : "wifiConnecting");
+      }
+    };
+
+    // WiFi list from the device — delivered after BLE connects in scan mode.
+    window.__onWifiList = (networks: WifiNetwork[]) => {
+      if (networks.length === 0) {
+        // Device doesn't have the WiFi-list characteristic; fall back to manual entry.
+        setStep("wifiEntry");
+      } else {
+        setWifiNetworks(networks);
+        setStep("wifiList");
+      }
+    };
+
+    // Deep-link QR that arrived before this page mounted.
+    if (window.__pendingPairingQR) {
+      const pending = window.__pendingPairingQR;
+      delete window.__pendingPairingQR;
+      setQrData(pending);
+      checkExistingDevice(pending.hardwareId);
+      setStep("setupFor");
+    }
+
+    return () => {
+      delete window.__onQRResult;
+      delete window.__onQRError;
+      delete window.__onPairingStatus;
+      delete window.__onWifiList;
+    };
+  }, []);
+
+  // Fallback: if bleConnecting doesn't get a WiFi list within 6s, surface a soft
+  // failure screen with retry instead of silently dumping the user into manual
+  // SSID entry — that jump used to feel like the app broke mid-flow.
+  useEffect(() => {
+    if (step !== "bleConnecting") return;
+    const t = setTimeout(() => setStep("bleFailed"), 6000);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  // Keep refs in sync with state for stable callbacks.
+  useEffect(() => { setupForRef.current = setupForValue; }, [setupForValue]);
+  useEffect(() => { wifiNetworksRef.current = wifiNetworks; }, [wifiNetworks]);
+  useEffect(() => { isRePairRef.current = isRePair; }, [isRePair]);
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  const handleScan = () => {
+    if (hasNative) {
+      window.__pairingBridge!.startQRScan();
+    } else {
+      setTimeout(() => {
+        setQrData({ hardwareId: "LT-A1B2C3", token: "8c4a7b9e6f1d2a3b5c4d6e7f8a9b0c1d" });
+        setStep("setupFor");
+      }, 600);
+    }
+  };
+
+  const handleConnectBLE = (hwId: string) => {
+    setStep("bleConnecting");
+    if (hasNative) {
+      window.__pairingBridge!.connectBLE({ hardwareId: hwId });
+    } else {
+      // Preview simulation — show a realistic network list after a short delay.
+      setTimeout(() => {
+        setWifiNetworks([
+          { ssid: "MyHomeNetwork", rssi: -42 },
+          { ssid: "iPhone Hotspot", rssi: -58 },
+          { ssid: "Neighbors_5G", rssi: -71 },
+          { ssid: "xfinitywifi", rssi: -78 },
+        ]);
+        setStep("wifiList");
+      }, 1800);
+    }
+  };
+
+  const handlePair = async () => {
+    if (!qrData || !user) return;
+    setStep("saving");
+
+    const { error: dbError } = await supabase.from("devices").upsert(
+      {
+        user_id: user.id,
+        hardware_id: qrData.hardwareId,
+        pairing_token: qrData.token,
+        wifi_ssid: ssid,
+      },
+      { onConflict: "hardware_id" }
+    );
+
+    if (dbError) {
+      setErrorMessage(
+        dbError.code === "42501"
+          ? "This device is already paired to another account."
+          : "Could not save device — check your connection and try again."
+      );
+      setStep("error");
+      return;
+    }
+
+    if (hasNative) {
+      setStatusLabel("Connecting to device…");
+      setStep("pairing");
+      window.__pairingBridge!.pair({
+        hardwareId: qrData.hardwareId,
+        token: qrData.token,
+        ssid,
+        pw,
+        ...(ssid2.trim() && pw2.trim() ? { ssid2: ssid2.trim(), pw2: pw2.trim() } : {}),
+        acct: user.id,
+      });
+    } else {
+      // Preview simulation.
+      setStatusLabel("Validating token…");
+      setStep("pairing");
+      await new Promise((r) => setTimeout(r, 1000));
+      setStatusLabel("Joining WiFi…");
+      setStep("wifiConnecting");
+      await new Promise((r) => setTimeout(r, 1500));
+      setStep(isRePair ? "done" : "personInfo");
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!qrData || !user) return;
+    setStep("completing");
+
+    const questions = getQuestions(setupForValue ?? "self", subjectName);
+    const surveyMap: Record<string, string> = {};
+    questions.forEach((q, i) => {
+      surveyMap[`q${i + 1}`] = surveyAnswers[i] ?? "";
+    });
+
+    await supabase
+      .from("devices")
+      .update({
+        setup_for: setupForValue,
+        subject_name: subjectName.trim() || null,
+        subject_dob: subjectDob || null,
+        survey_answers: surveyMap,
+        onboarding_complete: true,
+      })
+      .eq("hardware_id", qrData.hardwareId);
+
+    // Pull the user's family_code so the "for someone else" done screen can
+    // surface it as the share/follow code. ensureProfile() inside getProfile()
+    // creates one on the fly if this account doesn't have a profile row yet.
+    if (setupForValue === "other") {
+      const profile = await getProfile(user.id);
+      if (profile?.family_code) setFamilyCode(profile.family_code);
+    }
+
+    setStep("done");
+  };
+
+  const copyFamilyCode = async () => {
+    if (!familyCode) return;
+    try {
+      await navigator.clipboard.writeText(familyCode);
+    } catch {
+      // Native WKWebView may reject clipboard.writeText; the visual feedback
+      // still fires so the user sees the action register.
+    }
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleReset = () => {
+    window.__pairingBridge?.cancel();
+    setStep("idle");
+    setQrData(null);
+    setSetupForValue(null);
+    setWifiNetworks([]);
+    setSelectedSsid("");
+    setSsid("");
+    setPw("");
+    setSsid2("");
+    setPw2("");
+    setErrorMessage("");
+    setStatusLabel("");
+    setWifiError("");
+    setIsRePair(false);
+    setSubjectName("");
+    setSubjectDob("");
+    setSurveyAnswers(Array(10).fill(""));
+    setSurveyIndex(0);
+  };
+
+  // ── Screens ───────────────────────────────────────────────────────────────
+
+  // Done
+  if (step === "done") {
+    const isOther = setupForValue === "other";
+    const subject = subjectName.trim() || (isOther ? "your loved one" : "you");
+
     return (
-      <div className="relative flex min-h-[100dvh] flex-col px-6 safe-top safe-bottom">
-        <SkyBackground />
-        <div className="flex-1 flex flex-col items-center justify-center text-center pb-20">
-          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-5">
-            <CheckCircle2 className="size-10 text-green-500" />
+      <Shell>
+        <div className="flex-1 flex flex-col items-center text-center pt-6">
+          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+            <CheckCircle2 className="size-10 text-green-500" aria-hidden="true" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">Device Connected</h1>
-          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[260px] mx-auto mt-2">
-            Your LegacyTape recorder is paired and ready to use.
+          <h1 className="text-3xl font-bold text-foreground">
+            {isRePair ? "Device Reconnected!" : "Device Ready!"}
+          </h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[280px] mx-auto mt-2">
+            {isRePair
+              ? `${isOther ? subject + "'s" : "Your"} LegacyTape is back online and ready to record.`
+              : isOther
+              ? `${subject}'s LegacyTape is set up and ready to capture their story.`
+              : "Your LegacyTape recorder is set up and ready to capture your story."}
           </p>
-          <Button className="mt-8 h-13 px-8 text-base rounded-xl font-semibold" onClick={() => navigate("/")}>
-            Back to Home
-          </Button>
+
+          {isOther && familyCode && !isRePair && (
+            <div className="w-full max-w-sm mt-8 rounded-2xl bg-primary/5 border border-primary/20 p-4 space-y-2 text-left">
+              <p className="text-[12px] font-semibold text-primary uppercase tracking-wide">
+                Follow {subject}'s stories
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-2xl font-mono font-bold tracking-[0.2em] text-foreground">
+                  {familyCode}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg gap-1.5 shrink-0"
+                  onClick={copyFamilyCode}
+                  aria-label={copiedCode ? "Family code copied" : "Copy family code"}
+                >
+                  {copiedCode ? (
+                    <Check className="size-4 text-green-500" aria-hidden="true" />
+                  ) : (
+                    <Copy className="size-4" aria-hidden="true" />
+                  )}
+                  {copiedCode ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <p className="text-[12px] text-muted-foreground leading-relaxed">
+                Share this code with family members so they can follow {subject}'s
+                stories from their own phone.
+              </p>
+            </div>
+          )}
+
+          <div className="w-full max-w-sm mt-6 space-y-2">
+            {isOther ? (
+              <>
+                <Button
+                  className="w-full h-13 text-base rounded-xl font-semibold gap-2"
+                  onClick={() =>
+                    navigate("/dashboard", {
+                      state: {
+                        creatorUserId: user?.id,
+                        name: subject,
+                      },
+                    })
+                  }
+                >
+                  <Heart className="size-4" />
+                  Follow {subject}'s Stories
+                </Button>
+                <button
+                  className="w-full text-[14px] text-muted-foreground py-3 active:opacity-60 transition-opacity"
+                  onClick={() => navigate("/manage-device")}
+                >
+                  Manage Device
+                </button>
+              </>
+            ) : (
+              <Button
+                className="w-full h-13 text-base rounded-xl font-semibold"
+                onClick={() => navigate("/manage-device")}
+              >
+                Manage My Device
+              </Button>
+            )}
+          </div>
         </div>
-        <BottomTabBar />
-      </div>
+      </Shell>
     );
   }
 
-  return (
-    <div className="relative flex min-h-[100dvh] flex-col px-6 safe-top safe-bottom">
-      <SkyBackground />
+  // Error
+  if (step === "error") {
+    return (
+      <Shell>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-5">
+            <AlertCircle className="size-10 text-red-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Something Went Wrong</h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[280px] mx-auto mt-2">
+            {errorMessage}
+          </p>
+          <Button
+            className="mt-8 h-13 px-8 text-base rounded-xl font-semibold"
+            onClick={handleReset}
+          >
+            Try Again
+          </Button>
+        </div>
+      </Shell>
+    );
+  }
 
-      {/* Back button */}
-      <div className="pt-14 pb-2">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-muted-foreground active:opacity-60 transition-opacity -ml-1">
-          <ArrowLeft className="size-5" /> <span className="text-[15px]">Back</span>
-        </button>
-      </div>
+  // bleConnecting spinner — waiting for WiFi list from the device
+  if (step === "bleConnecting") {
+    return (
+      <Shell>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-5">
+            <Wifi className="size-10 text-primary animate-pulse" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Connecting…</h1>
+          <p className="text-muted-foreground text-[15px] mt-2">
+            Scanning for nearby WiFi networks
+          </p>
+        </div>
+      </Shell>
+    );
+  }
 
-      {/* Content */}
-      <div className="flex flex-col items-center text-center pt-10">
-        {!scanning ? (
-          <>
-            <div className="w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm mb-5">
-              <ScanLine className="size-9 text-primary" />
+  // Spinner states (saving → pairing → wifiConnecting → completing)
+  if (
+    step === "saving" ||
+    step === "pairing" ||
+    step === "wifiConnecting" ||
+    step === "completing"
+  ) {
+    const label =
+      step === "saving"
+        ? "Registering device…"
+        : step === "completing"
+        ? "Finishing setup…"
+        : statusLabel;
+
+    return (
+      <Shell>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-5">
+            <Loader2 className="size-10 text-primary animate-spin" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {step === "completing" ? "Setting Up…" : "Pairing…"}
+          </h1>
+          <p className="text-muted-foreground text-[15px] mt-2">{label}</p>
+          {(step === "pairing" || step === "wifiConnecting") && (
+            <div className="flex gap-2 mt-6">
+              {(["pairing", "wifiConnecting"] as Step[]).map((s, i) => (
+                <div
+                  key={s}
+                  className={`h-1.5 w-10 rounded-full transition-colors duration-300 ${
+                    (step === "pairing" && i === 0) || step === "wifiConnecting"
+                      ? "bg-primary"
+                      : "bg-muted"
+                  }`}
+                />
+              ))}
             </div>
-            <h1 className="text-3xl font-bold text-foreground">Scan QR Code</h1>
-            <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[260px] mx-auto mt-2">
-              Find the QR code on your LegacyTape recorder's screen and scan it to pair.
+          )}
+        </div>
+      </Shell>
+    );
+  }
+
+  // Survey
+  if (step === "survey") {
+    const questions = getQuestions(setupForValue ?? "self", subjectName);
+    const current = questions[surveyIndex];
+    const isLast = surveyIndex === questions.length - 1;
+    const currentAnswer = surveyAnswers[surveyIndex] ?? "";
+
+    const handleSurveyBack = () => {
+      if (surveyIndex > 0) {
+        setSurveyIndex((i) => i - 1);
+      } else {
+        setStep("personInfo");
+      }
+    };
+
+    const handleSurveyNext = () => {
+      if (isLast) {
+        handleComplete();
+      } else {
+        setSurveyIndex((i) => i + 1);
+      }
+    };
+
+    return (
+      <Shell showBack onBack={handleSurveyBack}>
+        <div className="flex flex-col flex-1">
+          {/* Progress */}
+          <div className="mb-6">
+            <div className="flex justify-between text-[12px] text-muted-foreground mb-1.5">
+              <span>Question {surveyIndex + 1} of {questions.length}</span>
+              <span>{Math.round(((surveyIndex + 1) / questions.length) * 100)}%</span>
+            </div>
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${((surveyIndex + 1) / questions.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <p className="text-[13px] font-medium text-primary uppercase tracking-wide mb-3">
+              {setupForValue === "other" ? `About ${subjectName || "them"}` : "About You"}
             </p>
-            <div className="w-full max-w-sm mx-auto space-y-3 mt-8">
-              <Button className="w-full h-13 text-base rounded-xl font-semibold gap-2" onClick={handleScan}>
-                <Camera className="size-5" />
-                Open Scanner
-              </Button>
+            <h2 className="text-xl font-bold text-foreground leading-snug mb-8">{current}</h2>
+            <Input
+              placeholder="Your answer…"
+              value={currentAnswer}
+              onChange={(e) => {
+                const updated = [...surveyAnswers];
+                updated[surveyIndex] = e.target.value;
+                setSurveyAnswers(updated);
+              }}
+              className="rounded-xl"
+              autoFocus
+            />
+          </div>
+
+          <Button
+            className="w-full h-13 text-base rounded-xl font-semibold mt-6"
+            onClick={handleSurveyNext}
+            disabled={!currentAnswer.trim()}
+          >
+            {isLast ? "Finish" : "Next"}
+            {!isLast && <ChevronRight className="size-4 ml-1" />}
+          </Button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Person info (name + DOB) — only path; sync option removed.
+  if (step === "personInfo") {
+    const isOther = setupForValue === "other";
+    // For self, device is already paired by this point — back would force a
+    // re-pair, so we hide it. Other path can step back to the secondary WiFi.
+    return (
+      <Shell showBack={isOther} onBack={isOther ? () => setStep("secondaryWifi") : undefined}>
+        <div className="flex flex-col flex-1">
+          <div className="mb-6">
+            <p className="text-[13px] font-medium text-primary uppercase tracking-wide mb-1">
+              {isOther ? "About the recipient" : "About you"}
+            </p>
+            <h1 className="text-2xl font-bold text-foreground leading-snug">
+              {isOther
+                ? "Tell us about them"
+                : "A little about you"}
+            </h1>
+            <p className="text-muted-foreground text-[14px] mt-1">
+              {isOther
+                ? "This helps the AI interviewer ask the right questions."
+                : "This personalizes your recording experience."}
+            </p>
+          </div>
+
+          <div className="space-y-4 flex-1">
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                {isOther ? "Their name" : "Your name"}
+              </label>
+              <Input
+                placeholder={isOther ? "e.g. Margaret" : "e.g. John"}
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
+                className="rounded-xl"
+                autoCorrect="off"
+              />
             </div>
-          </>
-        ) : (
-          <>
-            {/* Scanning viewfinder */}
-            <div className="relative w-64 h-64 rounded-2xl border-2 border-primary/60 bg-card/40 backdrop-blur-sm flex items-center justify-center overflow-hidden mb-6">
-              {/* Animated scan line */}
-              <div className="absolute inset-x-4 h-0.5 bg-primary/80 rounded-full animate-bounce" />
-              {/* Corner brackets */}
-              <div className="absolute top-3 left-3 w-6 h-6 border-t-2 border-l-2 border-primary rounded-tl-md" />
-              <div className="absolute top-3 right-3 w-6 h-6 border-t-2 border-r-2 border-primary rounded-tr-md" />
-              <div className="absolute bottom-3 left-3 w-6 h-6 border-b-2 border-l-2 border-primary rounded-bl-md" />
-              <div className="absolute bottom-3 right-3 w-6 h-6 border-b-2 border-r-2 border-primary rounded-br-md" />
-              <ScanLine className="size-12 text-primary/40" />
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                {isOther ? "Their date of birth" : "Your date of birth"}
+                <span className="text-muted-foreground/60 ml-1">(optional)</span>
+              </label>
+              <Input
+                type="date"
+                value={subjectDob}
+                onChange={(e) => setSubjectDob(e.target.value)}
+                className="rounded-xl"
+                max={new Date().toISOString().split("T")[0]}
+              />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">Scanning…</h2>
-            <p className="text-muted-foreground text-sm mt-1">Point your camera at the QR code</p>
-            <Button variant="ghost" className="mt-6 text-muted-foreground" onClick={() => setScanning(false)}>
-              Cancel
+          </div>
+
+          <Button
+            className="w-full h-13 text-base rounded-xl font-semibold mt-6"
+            onClick={() => setStep("survey")}
+            disabled={!subjectName.trim()}
+          >
+            Continue
+            <ChevronRight className="size-4 ml-1" />
+          </Button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // BLE-failed: the device didn't return a WiFi list within 6 s. Surface that
+  // explicitly so the user can retry the scan or fall back to manual entry,
+  // instead of being silently dropped into the SSID form.
+  if (step === "bleFailed") {
+    return (
+      <Shell showBack onBack={() => { setQrData(null); setStep("idle"); }}>
+        <div className="flex-1 flex flex-col items-center justify-center text-center">
+          <div className="w-20 h-20 rounded-full bg-amber-500/15 flex items-center justify-center mb-5">
+            <WifiOff className="size-9 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Couldn't Scan WiFi</h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[280px] mx-auto mt-2">
+            We couldn't get the network list from your device. Make sure it's powered on and
+            within a few feet of your phone.
+          </p>
+          <div className="w-full max-w-sm mt-8 space-y-2">
+            <Button
+              className="w-full h-13 text-base rounded-xl font-semibold"
+              onClick={() => handleConnectBLE(qrData!.hardwareId)}
+            >
+              Try Again
             </Button>
-          </>
-        )}
+            <button
+              className="w-full text-[14px] text-primary font-medium py-3 active:opacity-60 transition-opacity"
+              onClick={() => setStep("wifiEntry")}
+            >
+              Enter network manually
+            </button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Secondary WiFi (other path — collected before BLE pair so it goes in the payload)
+  if (step === "secondaryWifi") {
+    const hasS2 = !!ssid2.trim();
+    const hasP2 = !!pw2.trim();
+    const bothFilled = hasS2 && hasP2;
+    // Back to whichever WiFi-entry screen the user came from
+    const wifiBackStep = wifiNetworks.length > 0 ? "passwordEntry" : "wifiEntry";
+    return (
+      <Shell showBack onBack={() => setStep(wifiBackStep)}>
+        <div className="flex flex-col flex-1">
+          <div className="mb-5">
+            <p className="text-[13px] font-medium text-primary uppercase tracking-wide mb-1">
+              Optional
+            </p>
+            <h1 className="text-2xl font-bold text-foreground leading-snug">
+              Add their home WiFi?
+            </h1>
+            <p className="text-muted-foreground text-[14px] mt-1 leading-relaxed">
+              If you enter their home network now, the device will connect automatically
+              when it arrives. You can skip this and add it later.
+            </p>
+          </div>
+
+          <div className="space-y-3 flex-1">
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                Their network name (SSID)
+              </label>
+              <Input
+                placeholder="Their Home Network"
+                value={ssid2}
+                onChange={(e) => setSsid2(e.target.value)}
+                className="rounded-xl"
+                maxLength={32}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                Password
+              </label>
+              <Input
+                type="password"
+                placeholder="Their WiFi password"
+                value={pw2}
+                onChange={(e) => setPw2(e.target.value)}
+                className="rounded-xl"
+                maxLength={63}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 mt-5">
+            <Button
+              className="w-full h-13 text-base rounded-xl font-semibold"
+              onClick={handlePair}
+              disabled={hasS2 && !hasP2}
+            >
+              {bothFilled ? "Save & Pair Device" : "Continue"}
+              <ChevronRight className="size-4 ml-1" />
+            </Button>
+            <button
+              className="w-full text-[14px] text-primary font-medium py-3 active:opacity-60 transition-opacity"
+              onClick={() => { setSsid2(""); setPw2(""); handlePair(); }}
+            >
+              Skip — pair without it
+            </button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Who is this for?
+  if (step === "setupFor") {
+    return (
+      <Shell showBack onBack={() => { setQrData(null); setStep("idle"); }}>
+        <div className="flex flex-col flex-1">
+          <div className="mt-2 mb-0 text-center">
+            <h1 className="text-2xl font-bold text-foreground">Who is this device for?</h1>
+            <p className="text-muted-foreground text-[14px] mt-2 max-w-[260px] mx-auto">
+              This helps us personalise the experience.
+            </p>
+          </div>
+          <div className="flex-1 flex flex-col justify-center space-y-3">
+            <button
+              className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl p-4 flex items-center gap-4 active:opacity-70 transition-opacity"
+              onClick={() => {
+                setSetupForValue("self");
+                handleConnectBLE(qrData!.hardwareId);
+              }}
+            >
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="size-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-foreground">For me</p>
+                <p className="text-muted-foreground text-[13px]">
+                  I'll be recording my own stories.
+                </p>
+              </div>
+            </button>
+            <button
+              className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl p-4 flex items-center gap-4 active:opacity-70 transition-opacity"
+              onClick={() => {
+                setSetupForValue("other");
+                handleConnectBLE(qrData!.hardwareId);
+              }}
+            >
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Users className="size-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-foreground">For someone else</p>
+                <p className="text-muted-foreground text-[13px]">
+                  I'm gifting this to a family member.
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // WiFi network list — user picks a network, then enters only the password
+  if (step === "wifiList") {
+    const isOther = setupForValue === "other";
+    // Sort by signal strength (strongest first)
+    const sorted = [...wifiNetworks].sort((a, b) => b.rssi - a.rssi);
+    return (
+      <Shell showBack onBack={() => setStep("setupFor")}>
+        <div className="flex flex-col flex-1">
+          <div className="mb-4">
+            <h1 className="text-2xl font-bold text-foreground">Choose a Network</h1>
+            <p className="text-muted-foreground text-[14px] mt-1">
+              Select the WiFi{isOther ? " at your location" : ""} for{" "}
+              <span className="font-semibold text-foreground">{qrData?.hardwareId}</span>.
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2">
+            {sorted.map((net) => (
+              <button
+                key={net.ssid}
+                className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl px-4 py-3.5 flex items-center justify-between gap-3 active:opacity-70 transition-opacity"
+                onClick={() => {
+                  setSelectedSsid(net.ssid);
+                  setSsid(net.ssid);
+                  setPw("");
+                  setStep("passwordEntry");
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Wifi className="size-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium text-foreground truncate text-[15px]">
+                    {net.ssid}
+                  </span>
+                </div>
+                <WifiSignal rssi={net.rssi} />
+              </button>
+            ))}
+          </div>
+
+          <button
+            className="w-full text-[13px] text-muted-foreground py-4 active:opacity-60 transition-opacity text-center"
+            onClick={() => { setSsid(""); setStep("wifiEntry"); }}
+          >
+            Enter network name manually
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Password entry — shown after user picks a network from the list
+  if (step === "passwordEntry") {
+    const isOther = setupForValue === "other";
+    return (
+      <Shell showBack onBack={() => { setWifiError(""); setStep("wifiList"); }}>
+        <div className="flex flex-col flex-1">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-1">
+              <Wifi className="size-4 text-primary" />
+              <span className="text-[13px] font-semibold text-primary">{selectedSsid}</span>
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Enter Password</h1>
+            <p className="text-muted-foreground text-[14px] mt-1">
+              Enter the password for this network.
+            </p>
+          </div>
+
+          {wifiError && (
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+              <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-[13px] text-destructive leading-relaxed">{wifiError}</p>
+            </div>
+          )}
+
+          <div className="flex-1">
+            <Input
+              type="password"
+              placeholder="WiFi password"
+              value={pw}
+              onChange={(e) => { setPw(e.target.value); if (wifiError) setWifiError(""); }}
+              className="rounded-xl"
+              maxLength={63}
+              autoComplete="current-password"
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2 mt-4">
+            <Button
+              className="w-full h-13 text-base rounded-xl font-semibold"
+              onClick={() => {
+                setWifiError("");
+                if (isOther) {
+                  setStep("secondaryWifi");
+                } else {
+                  handlePair();
+                }
+              }}
+              disabled={!pw.trim()}
+            >
+              {isOther ? "Next" : "Set Up Device"}
+              {isOther && <ChevronRight className="size-4 ml-1" />}
+            </Button>
+            <button
+              className="w-full text-[13px] text-muted-foreground py-2 active:opacity-60 transition-opacity"
+              onClick={() => { setWifiError(""); setStep("wifiList"); }}
+            >
+              Choose a different network
+            </button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // WiFi entry — manual fallback (device doesn't have WiFi-list characteristic)
+  if (step === "wifiEntry") {
+    const isOther = setupForValue === "other";
+    return (
+      <Shell showBack onBack={() => setStep("setupFor")}>
+        <div className="flex flex-col items-center text-center flex-1">
+          <div className="w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm mb-5">
+            <Wifi className="size-9 text-primary" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">Connect to WiFi</h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[260px] mx-auto mt-2">
+            Enter your home WiFi so{" "}
+            <span className="font-semibold text-foreground">{qrData?.hardwareId}</span> can
+            reach the internet.
+          </p>
+
+          <div className="w-full max-w-sm mt-8 space-y-3 text-left">
+            {wifiError && (
+              <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-[13px] text-destructive leading-relaxed">{wifiError}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                Network name (SSID)
+              </label>
+              <Input
+                placeholder="My Home Network"
+                value={ssid}
+                onChange={(e) => setSsid(e.target.value)}
+                className="rounded-xl"
+                maxLength={32}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+            </div>
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                Password
+              </label>
+              <Input
+                type="password"
+                placeholder="WiFi password"
+                value={pw}
+                onChange={(e) => { setPw(e.target.value); if (wifiError) setWifiError(""); }}
+                className="rounded-xl"
+                maxLength={63}
+                autoComplete="current-password"
+              />
+            </div>
+
+            <Button
+              className="w-full h-13 text-base rounded-xl font-semibold mt-2"
+              onClick={() => {
+                setWifiError("");
+                if (isOther) {
+                  setStep("secondaryWifi");
+                } else {
+                  handlePair();
+                }
+              }}
+              disabled={!ssid.trim() || !pw.trim()}
+            >
+              {isOther ? "Next" : "Set Up Device"}
+              {isOther && <ChevronRight className="size-4 ml-1" />}
+            </Button>
+
+            <button
+              className="w-full text-[13px] text-muted-foreground py-2 active:opacity-60 transition-opacity"
+              onClick={() => setStep("setupFor")}
+            >
+              Scan a different code
+            </button>
+          </div>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Idle — scan QR
+  return (
+    <Shell showBack onBack={() => navigate(-1)}>
+      <div className="flex flex-col items-center text-center flex-1 justify-center">
+        <div className="w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm mb-5">
+          <Camera className="size-9 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold text-foreground">Pair Your Device</h1>
+        <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[260px] mx-auto mt-2">
+          Turn on your LegacyTape recorder and scan the QR code shown on its screen.
+        </p>
+        <Button
+          className="w-full max-w-sm mt-8 h-13 text-base rounded-xl font-semibold gap-2"
+          onClick={handleScan}
+        >
+          <Camera className="size-5" />
+          Scan QR Code
+        </Button>
       </div>
-      <BottomTabBar />
-    </div>
+    </Shell>
   );
 };
 
