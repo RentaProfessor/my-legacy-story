@@ -239,13 +239,11 @@ const DeviceSetup = () => {
 
     window.__onPairingStatus = (byte: number) => {
       if (byte === 0x03) {
-        // Re-pair: device already had a completed onboarding — skip survey,
-        // preserve existing answers, jump straight to done.
-        if (isRePairRef.current) {
-          setStep("done");
-          return;
-        }
-        setStep("personInfo");
+        // Re-pair: skip the survey, preserve existing answers, jump to done.
+        // The onboarding_complete=true write happens in the effect below once
+        // step flips to "done" — done there so the supabase call doesn't have
+        // to dodge the stale-closure problem inside this mount-once callback.
+        setStep(isRePairRef.current ? "done" : "personInfo");
         return;
       }
       // Wrong WiFi password — let the user fix it without re-scanning the QR.
@@ -309,6 +307,20 @@ const DeviceSetup = () => {
   useEffect(() => { wifiNetworksRef.current = wifiNetworks; }, [wifiNetworks]);
   useEffect(() => { isRePairRef.current = isRePair; }, [isRePair]);
 
+  // On re-pair, restore onboarding_complete=true once we reach the done screen.
+  // handlePair's upsert always clears the flag so the firmware doesn't skip the
+  // survey on a fresh pair; for re-pairs we have to put it back since
+  // handleComplete (which normally sets it) is skipped.
+  useEffect(() => {
+    if (step === "done" && isRePair && qrData) {
+      supabase
+        .from("devices")
+        .update({ onboarding_complete: true })
+        .eq("hardware_id", qrData.hardwareId)
+        .then(() => {});
+    }
+  }, [step, isRePair, qrData]);
+
   // ── Actions ───────────────────────────────────────────────────────────────
 
   const handleScan = () => {
@@ -344,12 +356,19 @@ const DeviceSetup = () => {
     if (!qrData || !user) return;
     setStep("saving");
 
+    // Reset onboarding_complete on every pair attempt — the firmware polls
+    // device_status RPC and transitions Screen1→Screen2 the instant it sees
+    // `true`. If a previous test left the flag set, the device would jump past
+    // the survey before the user even sees it. isRePair (read pre-upsert in
+    // checkExistingDevice) preserves the "skip the survey" intent — we write
+    // the flag back to true after re-pair done, see __onPairingStatus 0x03.
     const { error: dbError } = await supabase.from("devices").upsert(
       {
         user_id: user.id,
         hardware_id: qrData.hardwareId,
         pairing_token: qrData.token,
         wifi_ssid: ssid,
+        onboarding_complete: false,
       },
       { onConflict: "hardware_id" }
     );
