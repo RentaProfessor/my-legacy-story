@@ -94,7 +94,7 @@ declare global {
     __onQRResult?: (data: QRData) => void;
     __onQRError?: (msg: string) => void;
     __onPairingStatus?: (byte: number) => void;
-    __onWifiList?: (networks: WifiNetwork[]) => void;
+    __onWifiListRaw?: (raw: string, bytes: number) => void;
     __pendingPairingQR?: QRData;
   }
 }
@@ -160,6 +160,10 @@ const DeviceSetup = () => {
 
   // WiFi network list (from device BLE scan) and the user's selection
   const [wifiNetworks, setWifiNetworks] = useState<WifiNetwork[]>([]);
+  // Admin-only diagnostic on the last WiFi-list payload received over BLE.
+  const [wifiDebug, setWifiDebug] = useState<
+    { bytes: number; count: number; parsed: boolean; sample: string } | null
+  >(null);
   const [selectedSsid, setSelectedSsid] = useState("");
 
   // Primary WiFi
@@ -298,11 +302,19 @@ const DeviceSetup = () => {
       }
     };
 
-    // WiFi list from the device — delivered after BLE connects in scan mode.
-    // Always go to the picker (no manual SSID entry anymore). An empty list is
-    // handled in the wifiList screen with a "no networks found / rescan" state.
-    window.__onWifiList = (networks: WifiNetwork[]) => {
-      setWifiNetworks(networks);
+    // WiFi list from the device — raw JSON string + byte count. We parse here
+    // (in JS) so a truncated/invalid BLE payload is caught instead of silently
+    // becoming an empty list. Always go to the picker; empty/parse-fail shows
+    // the "no networks found / rescan" state. Debug info is surfaced in admin.
+    window.__onWifiListRaw = (raw: string, bytes: number) => {
+      let nets: WifiNetwork[] = [];
+      let parsed = false;
+      try {
+        const p = JSON.parse(raw);
+        if (Array.isArray(p)) { nets = p as WifiNetwork[]; parsed = true; }
+      } catch { /* truncated / invalid */ }
+      setWifiDebug({ bytes, count: nets.length, parsed, sample: raw.slice(0, 80) });
+      setWifiNetworks(nets);
       setStep("wifiList");
     };
 
@@ -319,7 +331,7 @@ const DeviceSetup = () => {
       delete window.__onQRResult;
       delete window.__onQRError;
       delete window.__onPairingStatus;
-      delete window.__onWifiList;
+      delete window.__onWifiListRaw;
     };
   }, []);
 
@@ -1221,6 +1233,17 @@ const DeviceSetup = () => {
             <RefreshCw className="size-4" aria-hidden="true" />
             Rescan
           </button>
+
+          {isAdmin && wifiDebug && (
+            <div className="mt-1 mb-2 rounded-lg bg-muted/40 border border-border/40 px-3 py-2">
+              <p className="text-[10px] font-mono text-muted-foreground leading-relaxed">
+                debug · {wifiDebug.bytes} bytes · parsed {wifiDebug.parsed ? "ok" : "FAIL"} · {wifiDebug.count} nets
+                {wifiDebug.bytes > 0 && wifiDebug.count === 0 && (
+                  <><br/>payload: {wifiDebug.sample || "(empty)"}</>
+                )}
+              </p>
+            </div>
+          )}
         </div>
       </Shell>
     );
