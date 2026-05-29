@@ -216,3 +216,25 @@ $$;
 
 -- Allow the device to call this with just the anon key (no user session required).
 grant execute on function public.device_status(text, text) to anon;
+
+-- 9. Storage buckets + object RLS (created live via Management API on 2026-05-29)
+-- Both buckets are PRIVATE. finalize_recording uploads via the service-role key
+-- (bypasses RLS). The iOS app reads its own WAVs as the signed-in user, which
+-- needs the SELECT policy below or createSignedUrl returns 403.
+insert into storage.buckets (id, name, public)
+  values ('recording_chunks', 'recording_chunks', false)
+  on conflict (id) do nothing;
+
+insert into storage.buckets (id, name, public)
+  values ('recordings', 'recordings', false)
+  on conflict (id) do nothing;
+
+-- Path layout: recordings/<account_id>/<session_id>.wav → owner is folder[1].
+drop policy if exists "Users read own recording objects" on storage.objects;
+create policy "Users read own recording objects"
+  on storage.objects for select
+  to authenticated
+  using (
+    bucket_id = 'recordings'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
