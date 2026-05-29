@@ -238,3 +238,41 @@ create policy "Users read own recording objects"
     bucket_id = 'recordings'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- 10. Chapter mode (deployed live via Management API on 2026-05-29)
+-- All recordings flow into the current chapter_idx until the chapter advances.
+-- Advance is 'manual' (a control on the device) or 'auto' (every N minutes).
+-- Set in iOS onboarding + Manage Device settings; the device reads it via the
+-- device_config RPC. finalize_recording stores whatever chapter_idx the device
+-- sends in x-chapter.
+alter table public.devices
+  add column if not exists chapter_mode text not null default 'manual'
+    check (chapter_mode in ('manual','auto')),
+  add column if not exists chapter_auto_minutes int not null default 10;
+
+-- device_config — like device_status but also returns the chapter settings.
+-- Separate function so the existing device_status onboarding-poll contract is
+-- untouched. Device calls with its own hardware_id + pairing_token.
+create or replace function public.device_config(hw_id text, tok text)
+returns table (
+  onboarding_complete boolean,
+  chapter_mode text,
+  chapter_auto_minutes int
+)
+language sql
+security definer
+stable
+as $$
+  select onboarding_complete, chapter_mode, chapter_auto_minutes
+  from public.devices
+  where hardware_id = hw_id
+    and pairing_token = tok
+  limit 1;
+$$;
+
+-- 11. Edge Function get_recording (deployed --no-verify-jwt)
+-- Device-side playback. Headers: x-hardware-id, x-pair-token, x-chapter.
+-- Returns { found, url (signed 1h), duration_sec } for the most recent WAV in
+-- that chapter. Auth: devices.hardware_id + pairing_token -> account_id, then
+-- recordings.account_id + chapter_idx. (recordings has no device_id column.)
+-- Source: supabase/functions/get_recording/index.ts

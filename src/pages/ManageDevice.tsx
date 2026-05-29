@@ -80,6 +80,8 @@ interface Device {
   last_seen_at: string | null;
   onboarding_complete: boolean;
   sync_requested: boolean;
+  chapter_mode: "manual" | "auto";
+  chapter_auto_minutes: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -466,6 +468,18 @@ const ManageDevice = () => {
     setRecordings([]);
   };
 
+  const updateChapterSettings = async (
+    patch: Partial<Pick<Device, "chapter_mode" | "chapter_auto_minutes">>
+  ) => {
+    if (!device) return;
+    const next = { ...device, ...patch };
+    setDevice(next); // optimistic
+    await supabase
+      .from("devices")
+      .update(patch)
+      .eq("id", device.id);
+  };
+
   const renameRecording = async (id: string, name: string) => {
     await supabase.from("recordings").update({ chapter_name: name }).eq("id", id);
     setRecordings((prev) =>
@@ -613,6 +627,59 @@ const ManageDevice = () => {
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Chapter mode setting */}
+          <div className="border-t border-border/40 pt-3 space-y-2.5">
+            <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">
+              Chapters
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateChapterSettings({ chapter_mode: "manual" })}
+                aria-pressed={device.chapter_mode === "manual"}
+                className={`flex-1 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                  device.chapter_mode === "manual"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/60 text-muted-foreground"
+                }`}
+              >
+                Manual
+              </button>
+              <button
+                onClick={() => updateChapterSettings({ chapter_mode: "auto" })}
+                aria-pressed={device.chapter_mode === "auto"}
+                className={`flex-1 px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                  device.chapter_mode === "auto"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/60 text-muted-foreground"
+                }`}
+              >
+                Auto
+              </button>
+            </div>
+            {device.chapter_mode === "auto" && (
+              <div className="flex flex-wrap gap-1.5">
+                {[5, 10, 15, 30, 60].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => updateChapterSettings({ chapter_auto_minutes: m })}
+                    className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+                      device.chapter_auto_minutes === m
+                        ? "bg-primary/15 text-primary border border-primary/30"
+                        : "bg-muted/50 text-muted-foreground border border-transparent"
+                    }`}
+                  >
+                    {m < 60 ? `${m} min` : "1 hr"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+              {device.chapter_mode === "manual"
+                ? "A new chapter starts only when you switch it on the device."
+                : `A new chapter starts every ${device.chapter_auto_minutes} minutes.`}
+            </p>
           </div>
 
           <div className="border-t border-border/40 pt-2 -mb-1 flex flex-col">

@@ -60,6 +60,7 @@ type Step =
   | "wifiConnecting"
   | "welcomeBack"
   | "personInfo"
+  | "chapterMode"
   | "survey"
   | "completing"
   | "done"
@@ -185,6 +186,11 @@ const DeviceSetup = () => {
   // Post-pairing onboarding state
   const [subjectName, setSubjectName] = useState("");
   const [subjectDob, setSubjectDob] = useState("");
+  // Chapter advance mode: 'manual' (user switches) or 'auto' (every N minutes).
+  // The device polls device_config to learn this; also changeable later in
+  // Manage Device settings.
+  const [chapterMode, setChapterMode] = useState<"manual" | "auto">("manual");
+  const [chapterAutoMinutes, setChapterAutoMinutes] = useState(10);
   const [surveyAnswers, setSurveyAnswers] = useState<string[]>(Array(10).fill(""));
   const [surveyIndex, setSurveyIndex] = useState(0);
 
@@ -217,6 +223,8 @@ const DeviceSetup = () => {
         subject_name: subjectName.trim() || "Test User",
         subject_dob: subjectDob || null,
         survey_answers: {},
+        chapter_mode: chapterMode,
+        chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
       })
       .eq("hardware_id", qrData.hardwareId);
@@ -486,6 +494,8 @@ const DeviceSetup = () => {
         subject_name: subjectName.trim() || null,
         subject_dob: subjectDob || null,
         survey_answers: surveyMap,
+        chapter_mode: chapterMode,
+        chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
       })
       .eq("hardware_id", qrData.hardwareId);
@@ -530,6 +540,8 @@ const DeviceSetup = () => {
     setIsRePair(false);
     setSubjectName("");
     setSubjectDob("");
+    setChapterMode("manual");
+    setChapterAutoMinutes(10);
     setSurveyAnswers(Array(10).fill(""));
     setSurveyIndex(0);
   };
@@ -721,7 +733,7 @@ const DeviceSetup = () => {
       if (surveyIndex > 0) {
         setSurveyIndex((i) => i - 1);
       } else {
-        setStep("personInfo");
+        setStep("chapterMode");
       }
     };
 
@@ -886,7 +898,7 @@ const DeviceSetup = () => {
 
           <Button
             className="w-full h-13 text-base rounded-xl font-semibold mt-6"
-            onClick={() => setStep("survey")}
+            onClick={() => setStep("chapterMode")}
             disabled={!subjectName.trim()}
           >
             Continue
@@ -900,6 +912,93 @@ const DeviceSetup = () => {
               Skip onboarding (admin)
             </button>
           )}
+        </div>
+      </Shell>
+    );
+  }
+
+  // Chapter mode — how recordings get grouped into chapters on the device.
+  // All recordings flow into the current chapter until it advances; advance is
+  // either manual (a control on the device) or automatic every N minutes.
+  if (step === "chapterMode") {
+    return (
+      <Shell showBack onBack={() => setStep("personInfo")}>
+        <div className="flex flex-col flex-1">
+          <div className="mb-6">
+            <p className="text-[13px] font-medium text-primary uppercase tracking-wide mb-1">
+              Recording setup
+            </p>
+            <h1 className="text-2xl font-bold text-foreground leading-snug">
+              How should chapters work?
+            </h1>
+            <p className="text-muted-foreground text-[14px] mt-1 leading-relaxed">
+              Recordings group into one chapter until you move to the next. You can
+              change this anytime in Manage Device.
+            </p>
+          </div>
+
+          <div className="space-y-3 flex-1">
+            <button
+              className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                chapterMode === "manual"
+                  ? "border-primary bg-primary/5"
+                  : "border-border/60 bg-card/80"
+              }`}
+              onClick={() => setChapterMode("manual")}
+              aria-pressed={chapterMode === "manual"}
+            >
+              <p className="font-semibold text-foreground">Switch chapters manually</p>
+              <p className="text-muted-foreground text-[13px] mt-0.5">
+                A new chapter starts only when you tell the device to.
+              </p>
+            </button>
+
+            <button
+              className={`w-full rounded-2xl border p-4 text-left transition-all ${
+                chapterMode === "auto"
+                  ? "border-primary bg-primary/5"
+                  : "border-border/60 bg-card/80"
+              }`}
+              onClick={() => setChapterMode("auto")}
+              aria-pressed={chapterMode === "auto"}
+            >
+              <p className="font-semibold text-foreground">Switch automatically</p>
+              <p className="text-muted-foreground text-[13px] mt-0.5">
+                Start a new chapter on a regular schedule.
+              </p>
+            </button>
+
+            {chapterMode === "auto" && (
+              <div className="rounded-2xl border border-border/60 bg-card/80 p-4">
+                <label className="text-[13px] font-medium text-muted-foreground mb-2 block">
+                  New chapter every
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[5, 10, 15, 30, 60].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => setChapterAutoMinutes(m)}
+                      className={`px-3.5 py-2 rounded-xl text-[14px] font-medium transition-all ${
+                        chapterAutoMinutes === m
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/60 text-muted-foreground"
+                      }`}
+                    >
+                      {m < 60 ? `${m} min` : "1 hr"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button
+            className="w-full h-13 text-base rounded-xl font-semibold mt-6"
+            onClick={() => setStep("survey")}
+          >
+            Continue
+            <ChevronRight className="size-4 ml-1" />
+          </Button>
         </div>
       </Shell>
     );
