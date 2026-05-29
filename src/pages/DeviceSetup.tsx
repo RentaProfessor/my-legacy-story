@@ -199,6 +199,28 @@ const DeviceSetup = () => {
   const wifiNetworksRef = useRef<WifiNetwork[]>([]);
 
   const hasNative = !!window.__nativePairingBridge;
+  // Admin mode is toggled from CreatorProfile and persisted in localStorage.
+  // When on, exposes a "Skip" button on the post-pair survey screens so we
+  // don't have to slog through 10 questions on every test reflash.
+  const isAdmin =
+    typeof window !== "undefined" &&
+    window.localStorage.getItem("adminMode") === "true";
+
+  const handleSkipOnboarding = async () => {
+    if (!qrData) return;
+    setStep("completing");
+    await supabase
+      .from("devices")
+      .update({
+        setup_for: setupForValue ?? "self",
+        subject_name: subjectName.trim() || "Test User",
+        subject_dob: subjectDob || null,
+        survey_answers: {},
+        onboarding_complete: true,
+      })
+      .eq("hardware_id", qrData.hardwareId);
+    setStep("done");
+  };
 
   // ── Native → JS callbacks ─────────────────────────────────────────────────
 
@@ -713,6 +735,14 @@ const DeviceSetup = () => {
             {isLast ? "Finish" : "Next"}
             {!isLast && <ChevronRight className="size-4 ml-1" />}
           </Button>
+          {isAdmin && (
+            <button
+              className="w-full text-[12px] text-muted-foreground/70 py-3 mt-1 active:opacity-60 transition-opacity"
+              onClick={handleSkipOnboarding}
+            >
+              Skip onboarding (admin)
+            </button>
+          )}
         </div>
       </Shell>
     );
@@ -778,6 +808,14 @@ const DeviceSetup = () => {
             Continue
             <ChevronRight className="size-4 ml-1" />
           </Button>
+          {isAdmin && (
+            <button
+              className="w-full text-[12px] text-muted-foreground/70 py-3 mt-1 active:opacity-60 transition-opacity"
+              onClick={handleSkipOnboarding}
+            >
+              Skip onboarding (admin)
+            </button>
+          )}
         </div>
       </Shell>
     );
