@@ -58,6 +58,7 @@ type Step =
   | "saving"
   | "pairing"
   | "wifiConnecting"
+  | "welcomeBack"
   | "personInfo"
   | "survey"
   | "completing"
@@ -263,11 +264,13 @@ const DeviceSetup = () => {
 
     window.__onPairingStatus = (byte: number) => {
       if (byte === 0x03) {
-        // Re-pair: skip the survey, preserve existing answers, jump to done.
-        // The onboarding_complete=true write happens in the effect below once
-        // step flips to "done" — done there so the supabase call doesn't have
-        // to dodge the stale-closure problem inside this mount-once callback.
-        setStep(isRePairRef.current ? "done" : "personInfo");
+        // Re-pair: route through the "Welcome back" confirmation so the user
+        // can choose to skip the survey or re-run it. Admin mode skips this
+        // (checkExistingDevice already disables isRePair under admin), and
+        // first pairs go straight to personInfo as before. The
+        // onboarding_complete=true write for "pick up where we left off"
+        // happens in the effect below when step flips to "done".
+        setStep(isRePairRef.current ? "welcomeBack" : "personInfo");
         return;
       }
       // Wrong WiFi password — let the user fix it without re-scanning the QR.
@@ -440,8 +443,30 @@ const DeviceSetup = () => {
       setStatusLabel("Joining WiFi…");
       setStep("wifiConnecting");
       await new Promise((r) => setTimeout(r, 1500));
-      setStep(isRePair ? "done" : "personInfo");
+      setStep(isRePair ? "welcomeBack" : "personInfo");
     }
+  };
+
+  // "Welcome back" actions — only reachable when isRePair && !isAdmin.
+  const handleRePairResume = () => {
+    // Existing subject_name / survey_answers stay untouched on the row.
+    // Effect on step="done" + isRePair=true re-sets onboarding_complete=true.
+    setStep("done");
+  };
+
+  const handleRePairRestart = () => {
+    // Treat this as a fresh setup: drop the re-pair flag so we no longer
+    // short-circuit, clear cached subject data so personInfo starts blank,
+    // and run the normal personInfo → survey → handleComplete path. The
+    // upsert in handlePair already cleared onboarding_complete to false,
+    // so the device firmware will keep waiting on the pairing screen until
+    // handleComplete writes true after the new survey.
+    setIsRePair(false);
+    setSubjectName("");
+    setSubjectDob("");
+    setSurveyAnswers(Array(10).fill(""));
+    setSurveyIndex(0);
+    setStep("personInfo");
   };
 
   const handleComplete = async () => {
@@ -759,6 +784,49 @@ const DeviceSetup = () => {
               Skip onboarding (admin)
             </button>
           )}
+        </div>
+      </Shell>
+    );
+  }
+
+  // Welcome back — shown when the device is already onboarded for this user.
+  // Lets them pick up where they left off (default, muscle-memory case) or
+  // start fresh (re-run personInfo + survey, overwrite existing answers).
+  if (step === "welcomeBack") {
+    const isOther = setupForValue === "other";
+    const subject = subjectName.trim() || (isOther ? "your loved one" : "you");
+    return (
+      <Shell>
+        <div className="flex-1 flex flex-col items-center text-center pt-6">
+          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Heart className="size-10 text-primary" aria-hidden="true" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground">Welcome back</h1>
+          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[280px] mx-auto mt-2">
+            {qrData?.hardwareId} is already set up
+            {isOther ? ` for ${subject}` : ""}. What would you like to do?
+          </p>
+
+          <div className="w-full max-w-sm mt-8 space-y-3">
+            <Button
+              className="w-full h-13 text-base rounded-xl font-semibold"
+              onClick={handleRePairResume}
+              autoFocus
+              aria-label="Pick up where we left off"
+            >
+              Pick up where we left off
+            </Button>
+            <button
+              className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl p-4 text-left active:opacity-70 transition-opacity"
+              onClick={handleRePairRestart}
+              aria-label="Start fresh with a new survey"
+            >
+              <p className="font-semibold text-foreground">Start fresh</p>
+              <p className="text-muted-foreground text-[13px] mt-0.5">
+                Re-do the questions and overwrite the existing answers.
+              </p>
+            </button>
+          </div>
         </div>
       </Shell>
     );
