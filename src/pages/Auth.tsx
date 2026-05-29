@@ -44,6 +44,26 @@ const Auth = () => {
     }
   };
 
+  // Admin mode now signs in for real (anonymous auth) so it gets a genuine
+  // Supabase session — RLS, Edge Functions, and device removal all work exactly
+  // like a normal user instead of failing silently with no auth.uid().
+  const handleAdminContinue = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { error } = await supabase.auth.signInAnonymously();
+        if (error) throw error;
+      }
+      navigate(window.__pendingPairingQR ? "/device-setup" : "/home");
+    } catch (err: any) {
+      setError(err.message || "Could not start admin session");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSocialLogin = async (provider: "google" | "apple") => {
     setError("");
     const isNative = !!(window as any).__nativeSpeechBridge;
@@ -214,10 +234,11 @@ const Auth = () => {
         {/* Admin bypass */}
         {isAdmin && (
           <button
-            onClick={() => navigate("/home")}
-            className="w-full h-12 mt-4 rounded-xl border-2 border-dashed border-primary/40 text-primary font-semibold text-sm active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+            onClick={handleAdminContinue}
+            disabled={loading}
+            className="w-full h-12 mt-4 rounded-xl border-2 border-dashed border-primary/40 text-primary font-semibold text-sm active:opacity-80 transition-opacity flex items-center justify-center gap-2 disabled:opacity-60"
           >
-            <Wrench className="size-4" />
+            {loading ? <Loader2 className="size-4 animate-spin" /> : <Wrench className="size-4" />}
             Continue as Admin
           </button>
         )}
