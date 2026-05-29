@@ -179,6 +179,20 @@ create policy "Service role can insert recordings"
   on public.recordings for insert
   with check (true);
 
+-- The iOS app writes `transcription` / `transcribed_at` back to the row after
+-- running Apple SFSpeech on the downloaded WAV. Without this, the update fails
+-- RLS silently and the recording stays stuck at "Transcribing…".
+create policy "Users update own recordings"
+  on public.recordings for update
+  using (account_id = auth.uid())
+  with check (account_id = auth.uid());
+
+-- The app lets a user delete a recording (and "Remove this device" deletes all
+-- of an account's recordings). Without this, those deletes fail RLS.
+create policy "Users delete own recordings"
+  on public.recordings for delete
+  using (account_id = auth.uid());
+
 -- Enable Realtime so the app receives new recordings + transcript updates live.
 alter publication supabase_realtime add table public.recordings;
 
