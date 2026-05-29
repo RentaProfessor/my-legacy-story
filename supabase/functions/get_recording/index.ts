@@ -1,17 +1,21 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// get_recording — device-side playback.
-// The device sends its hardware id + pair token + the active chapter index.
-// We return a signed URL (1h) to the most recent WAV for that chapter so the
-// firmware can stream it to I2S.
+// get_recording — device-side chapter playback.
 //
-// NOTE on the schema: the `recordings` table has NO `device_id` column — it
-// links to the owning user via `account_id` (= devices.user_id). So we resolve
-// the device -> user_id, then look up recordings by account_id + chapter_idx.
-// (Single-device-per-account is assumed today; if a user pairs multiple
-// devices, recordings for the same chapter_idx are shared across them — see the
-// note to the firmware dev about adding a device_id column if we need per-device
-// isolation.)
+// All recordings in a chapter play as ONE continuous timeline: the device
+// starts at the first recording and the user can fast-forward/seek across all
+// of them, then play from anywhere. So we return EVERY recording for the
+// chapter, ordered oldest -> newest (first take first), each with a signed URL
+// and its duration, plus the total so the firmware can build a seek bar.
+//
+// Headers: x-hardware-id, x-pair-token, x-chapter (0-based active chapter).
+// Body: {}
+// Response:
+//   { found: true, count, total_duration_sec, recordings: [ { url, duration_sec }, ... ] }
+//   { found: false }   when the chapter has no recordings
+//
+// Schema note: `recordings` has no device_id column — it links to the owning
+// user via account_id (= devices.user_id). Single-device-per-account assumed.
 //
 // Deploy: supabase functions deploy get_recording --no-verify-jwt
 
@@ -41,7 +45,7 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  // Authenticate the device (hardware_id + pairing_token), resolve owning user.
+  // Authenticate the device, resolve owning user.
   const { data: dev } = await supa
     .from("devices")
     .select("id, user_id, pairing_token")
@@ -52,29 +56,45 @@ Deno.serve(async (req) => {
     return new Response("unauthorized", { status: 401, headers: CORS });
   }
 
-  // Most recent recording for this account + chapter.
-  const { data: rec } = await supa
+  // ALL recordings for this account + chapter, oldest first (playback order).
+  const { data: recs } = await supa
     .from("recordings")
     .select("storage_path, duration_seconds")
     .eq("account_id", dev.user_id)
     .eq("chapter_idx", chapter)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: true });
 
-  if (!rec) return json({ found: false });
+  if (!recs || recs.length === 0) return json({ found: false });
 
+  // Sign all paths in one call; map back by path to preserve playback order.
+  const paths = recs.map((r) => r.storage_path);
   const { data: signed, error: signErr } = await supa.storage
     .from("recordings")
-    .createSignedUrl(rec.storage_path, 3600);
+    .createSignedUrls(paths, 3600);
 
-  if (signErr || !signed?.signedUrl) {
-    return json({ found: false, error: "could not sign url" }, 500);
+  if (signErr || !signed) {
+    return json({ found: false, error: "could not sign urls" }, 500);
   }
+
+  const urlByPath = new Map(signed.map((s) => [s.path, s.signedUrl]));
+
+  const recordings = recs
+    .map((r) => ({
+      url: urlByPath.get(r.storage_path) ?? null,
+      duration_sec: r.duration_seconds,
+    }))
+    .filter((r) => r.url); // drop any that failed to sign
+
+  if (recordings.length === 0) {
+    return json({ found: false, error: "no signable recordings" }, 500);
+  }
+
+  const total = recordings.reduce((sum, r) => sum + (r.duration_sec || 0), 0);
 
   return json({
     found: true,
-    url: signed.signedUrl,
-    duration_sec: rec.duration_seconds,
+    count: recordings.length,
+    total_duration_sec: total,
+    recordings,
   });
 });

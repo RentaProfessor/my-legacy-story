@@ -271,8 +271,13 @@ as $$
 $$;
 
 -- 11. Edge Function get_recording (deployed --no-verify-jwt)
--- Device-side playback. Headers: x-hardware-id, x-pair-token, x-chapter.
--- Returns { found, url (signed 1h), duration_sec } for the most recent WAV in
--- that chapter. Auth: devices.hardware_id + pairing_token -> account_id, then
--- recordings.account_id + chapter_idx. (recordings has no device_id column.)
+-- Device-side chapter playback. Headers: x-hardware-id, x-pair-token, x-chapter.
+-- Returns EVERY recording in the chapter, oldest->newest (first take first), so
+-- the device plays them as one continuous timeline with fast-forward/seek:
+--   { found: true, count, total_duration_sec,
+--     recordings: [ { url (signed 1h), duration_sec }, ... ] }
+--   { found: false }   when the chapter has no recordings
+-- Auth: devices.hardware_id + pairing_token -> account_id, then
+-- recordings.account_id + chapter_idx ordered by created_at asc.
+-- (recordings has no device_id column.)
 -- Source: supabase/functions/get_recording/index.ts
