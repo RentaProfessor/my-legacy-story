@@ -450,22 +450,31 @@ const ManageDevice = () => {
     });
   };
 
+  const [removing, setRemoving] = useState(false);
+
   const removeDevice = async () => {
     if (!device) return;
-    // Stop any playback before nuking the rows it might reference.
+    setRemoving(true);
+    // Stop any playback before tearing down.
     releaseAudio();
     setPlayingId(null);
     setLoadingId(null);
-    // Delete all recordings for this account first — their WAV files in storage
-    // are scoped to the account, so they'd be orphans if we didn't sweep them.
-    const recsToDrop = recordings.map((r) => r.storage_path);
-    if (recsToDrop.length > 0) {
-      await supabase.storage.from("recordings").remove(recsToDrop);
+    // Server-side teardown via the delete_device Edge Function: it uses the
+    // service role to delete the WAVs, the orphaned PCM chunks (keyed by
+    // hardware_id, which the client can't reach), the recordings rows, and the
+    // device row — after verifying we own the device. The client can't delete
+    // storage objects directly (no storage DELETE policy by design).
+    const { error } = await supabase.functions.invoke("delete_device", {
+      body: { deviceId: device.id },
+    });
+    if (error) {
+      console.error("delete_device failed:", error);
+      setRemoving(false);
+      return; // leave UI intact so the user can retry
     }
-    await supabase.from("recordings").delete().eq("account_id", user!.id);
-    await supabase.from("devices").delete().eq("id", device.id);
     setDevice(null);
     setRecordings([]);
+    setRemoving(false);
   };
 
   const updateChapterSettings = async (
@@ -797,12 +806,13 @@ const ManageDevice = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { removeDevice(); setConfirmRemoveDevice(false); }}
+              disabled={removing}
+              onClick={(e) => { e.preventDefault(); removeDevice().then(() => setConfirmRemoveDevice(false)); }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove Device
+              {removing ? "Removing…" : "Remove Device"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

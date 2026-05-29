@@ -281,3 +281,13 @@ $$;
 -- recordings.account_id + chapter_idx ordered by created_at asc.
 -- (recordings has no device_id column.)
 -- Source: supabase/functions/get_recording/index.ts
+
+-- 12. Edge Function delete_device (deployed WITH jwt verification)
+-- Full teardown when the user taps "Remove this device". Runs as the signed-in
+-- user (JWT verified), confirms ownership, then uses the service role to delete
+-- what the client can't reach via RLS:
+--   1. WAVs        recordings/<account_id>/*.wav
+--   2. PCM chunks  recording_chunks/<hardware_id>/<session>/*.pcm  (orphans)
+--   3. recordings rows for the account
+--   4. the devices row
+-- Body: { deviceId }. Source: supabase/functions/delete_device/index.ts
