@@ -315,7 +315,10 @@ const DeviceSetup = () => {
       } catch { /* truncated / invalid */ }
       setWifiDebug({ bytes, count: nets.length, parsed, sample: raw.slice(0, 80) });
       setWifiNetworks(nets);
-      setStep("wifiList");
+      // Only land on / stay on the picker while we're still choosing. A late
+      // poll result must not yank the user back from passwordEntry etc.; it
+      // just refreshes the cached list.
+      setStep((cur) => (cur === "bleConnecting" || cur === "wifiList" ? "wifiList" : cur));
     };
 
     // Deep-link QR that arrived before this page mounted.
