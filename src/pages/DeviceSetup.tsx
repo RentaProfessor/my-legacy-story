@@ -14,6 +14,7 @@ import {
   Copy,
   Check,
   Heart,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,23 +37,20 @@ const ERROR_MESSAGE: Record<number, string> = {
   0xe4: "Device error — please try again.",
 };
 
-// State machine:
-// setupFor → bleConnecting ─┬─ wifiList → passwordEntry ─┐
-//                           ├─ wifiEntry (manual)         │
-//                           └─ bleFailed (retry / manual) │
+// State machine (WiFi is scan-and-pick only — no manual SSID entry):
+// setupFor → bleConnecting ─┬─ wifiList (pick / rescan) → passwordEntry ─┐
+//                           └─ bleFailed (scan again) ───────────────────┤
 //                                                          ↓ (other: secondaryWifi →)
 //                                       saving → pairing → wifiConnecting
-//                                            → personInfo → survey
+//                                            → personInfo → chapterMode → survey
 //                                            → completing → done
-// If the device is already onboarded (re-pair), 0x03 jumps straight to `done`
-// without touching survey columns.
+// Re-pair (already onboarded) routes 0x03 → welcomeBack instead.
 type Step =
   | "idle"
   | "setupFor"
   | "bleConnecting"
   | "bleFailed"
   | "wifiList"
-  | "wifiEntry"
   | "passwordEntry"
   | "secondaryWifi"
   | "saving"
@@ -281,11 +279,11 @@ const DeviceSetup = () => {
         setStep(isRePairRef.current ? "welcomeBack" : "personInfo");
         return;
       }
-      // Wrong WiFi password — let the user fix it without re-scanning the QR.
+      // Wrong WiFi password — back to the password screen for the picked network.
       if (byte === 0xe3) {
         setWifiError(ERROR_MESSAGE[0xe3]);
         setPw("");
-        setStep(wifiNetworksRef.current.length > 0 ? "passwordEntry" : "wifiEntry");
+        setStep("passwordEntry");
         return;
       }
       if (byte >= 0xe0) {
@@ -301,14 +299,11 @@ const DeviceSetup = () => {
     };
 
     // WiFi list from the device — delivered after BLE connects in scan mode.
+    // Always go to the picker (no manual SSID entry anymore). An empty list is
+    // handled in the wifiList screen with a "no networks found / rescan" state.
     window.__onWifiList = (networks: WifiNetwork[]) => {
-      if (networks.length === 0) {
-        // Device doesn't have the WiFi-list characteristic; fall back to manual entry.
-        setStep("wifiEntry");
-      } else {
-        setWifiNetworks(networks);
-        setStep("wifiList");
-      }
+      setWifiNetworks(networks);
+      setStep("wifiList");
     };
 
     // Deep-link QR that arrived before this page mounted.
@@ -1019,19 +1014,13 @@ const DeviceSetup = () => {
             We couldn't get the network list from your device. Make sure it's powered on and
             within a few feet of your phone.
           </p>
-          <div className="w-full max-w-sm mt-8 space-y-2">
+          <div className="w-full max-w-sm mt-8">
             <Button
               className="w-full h-13 text-base rounded-xl font-semibold"
               onClick={() => handleConnectBLE(qrData!.hardwareId)}
             >
-              Try Again
+              Scan Again
             </Button>
-            <button
-              className="w-full text-[14px] text-primary font-medium py-3 active:opacity-60 transition-opacity"
-              onClick={() => setStep("wifiEntry")}
-            >
-              Enter network manually
-            </button>
           </div>
         </div>
       </Shell>
@@ -1043,10 +1032,8 @@ const DeviceSetup = () => {
     const hasS2 = !!ssid2.trim();
     const hasP2 = !!pw2.trim();
     const bothFilled = hasS2 && hasP2;
-    // Back to whichever WiFi-entry screen the user came from
-    const wifiBackStep = wifiNetworks.length > 0 ? "passwordEntry" : "wifiEntry";
     return (
-      <Shell showBack onBack={() => setStep(wifiBackStep)}>
+      <Shell showBack onBack={() => setStep("passwordEntry")}>
         <div className="flex flex-col flex-1">
           <div className="mb-5">
             <p className="text-[13px] font-medium text-primary uppercase tracking-wide mb-1">
@@ -1170,8 +1157,11 @@ const DeviceSetup = () => {
   // WiFi network list — user picks a network, then enters only the password
   if (step === "wifiList") {
     const isOther = setupForValue === "other";
-    // Sort by signal strength (strongest first)
-    const sorted = [...wifiNetworks].sort((a, b) => b.rssi - a.rssi);
+    // Sort by signal strength (strongest first); de-dupe SSIDs from the scan.
+    const seen = new Set<string>();
+    const sorted = [...wifiNetworks]
+      .sort((a, b) => b.rssi - a.rssi)
+      .filter((n) => (seen.has(n.ssid) ? false : (seen.add(n.ssid), true)));
     return (
       <Shell showBack onBack={() => setStep("setupFor")}>
         <div className="flex flex-col flex-1">
@@ -1183,34 +1173,50 @@ const DeviceSetup = () => {
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2">
-            {sorted.map((net) => (
-              <button
-                key={net.ssid}
-                className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl px-4 py-3.5 flex items-center justify-between gap-3 active:opacity-70 transition-opacity"
-                onClick={() => {
-                  setSelectedSsid(net.ssid);
-                  setSsid(net.ssid);
-                  setPw("");
-                  setStep("passwordEntry");
-                }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <Wifi className="size-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium text-foreground truncate text-[15px]">
-                    {net.ssid}
-                  </span>
-                </div>
-                <WifiSignal rssi={net.rssi} />
-              </button>
-            ))}
-          </div>
+          {sorted.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <WifiOff className="size-8 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <p className="font-semibold text-foreground">No networks found</p>
+              <p className="text-muted-foreground text-[13px] mt-1 max-w-[260px]">
+                Make sure you're near your router (the device only sees 2.4GHz networks),
+                then scan again.
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-2">
+              {sorted.map((net) => (
+                <button
+                  key={net.ssid}
+                  className="w-full bg-card/80 backdrop-blur-sm border border-border/60 rounded-2xl px-4 py-3.5 flex items-center justify-between gap-3 active:opacity-70 transition-opacity"
+                  onClick={() => {
+                    setSelectedSsid(net.ssid);
+                    setSsid(net.ssid);
+                    setPw("");
+                    setStep("passwordEntry");
+                  }}
+                  aria-label={`Select network ${net.ssid}`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Wifi className="size-4 text-muted-foreground shrink-0" aria-hidden="true" />
+                    <span className="font-medium text-foreground truncate text-[15px]">
+                      {net.ssid}
+                    </span>
+                  </div>
+                  <WifiSignal rssi={net.rssi} />
+                </button>
+              ))}
+            </div>
+          )}
 
           <button
-            className="w-full text-[13px] text-muted-foreground py-4 active:opacity-60 transition-opacity text-center"
-            onClick={() => { setSsid(""); setStep("wifiEntry"); }}
+            className="w-full text-[14px] text-primary font-medium py-4 active:opacity-60 transition-opacity text-center flex items-center justify-center gap-1.5"
+            onClick={() => handleConnectBLE(qrData!.hardwareId)}
+            aria-label="Rescan for networks"
           >
-            Enter network name manually
+            <RefreshCw className="size-4" aria-hidden="true" />
+            Rescan
           </button>
         </div>
       </Shell>
@@ -1275,88 +1281,6 @@ const DeviceSetup = () => {
               onClick={() => { setWifiError(""); setStep("wifiList"); }}
             >
               Choose a different network
-            </button>
-          </div>
-        </div>
-      </Shell>
-    );
-  }
-
-  // WiFi entry — manual fallback (device doesn't have WiFi-list characteristic)
-  if (step === "wifiEntry") {
-    const isOther = setupForValue === "other";
-    return (
-      <Shell showBack onBack={() => setStep("setupFor")}>
-        <div className="flex flex-col items-center text-center flex-1">
-          <div className="w-20 h-20 rounded-2xl bg-card/80 backdrop-blur-sm flex items-center justify-center border border-border/60 shadow-sm mb-5">
-            <Wifi className="size-9 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">Connect to WiFi</h1>
-          <p className="text-muted-foreground text-[15px] leading-relaxed max-w-[260px] mx-auto mt-2">
-            Enter your home WiFi so{" "}
-            <span className="font-semibold text-foreground">{qrData?.hardwareId}</span> can
-            reach the internet.
-          </p>
-
-          <div className="w-full max-w-sm mt-8 space-y-3 text-left">
-            {wifiError && (
-              <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                <p className="text-[13px] text-destructive leading-relaxed">{wifiError}</p>
-              </div>
-            )}
-            <div>
-              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
-                Network name (SSID)
-              </label>
-              <Input
-                placeholder="My Home Network"
-                value={ssid}
-                onChange={(e) => setSsid(e.target.value)}
-                className="rounded-xl"
-                maxLength={32}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
-            </div>
-            <div>
-              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
-                Password
-              </label>
-              <Input
-                type="password"
-                placeholder="WiFi password"
-                value={pw}
-                onChange={(e) => { setPw(e.target.value); if (wifiError) setWifiError(""); }}
-                className="rounded-xl"
-                maxLength={63}
-                autoComplete="current-password"
-              />
-            </div>
-
-            <Button
-              className="w-full h-13 text-base rounded-xl font-semibold mt-2"
-              onClick={() => {
-                setWifiError("");
-                if (isOther) {
-                  setStep("secondaryWifi");
-                } else {
-                  handlePair();
-                }
-              }}
-              disabled={!ssid.trim() || !pw.trim()}
-            >
-              {isOther ? "Next" : "Set Up Device"}
-              {isOther && <ChevronRight className="size-4 ml-1" />}
-            </Button>
-
-            <button
-              className="w-full text-[13px] text-muted-foreground py-2 active:opacity-60 transition-opacity"
-              onClick={() => setStep("setupFor")}
-            >
-              Scan a different code
             </button>
           </div>
         </div>
