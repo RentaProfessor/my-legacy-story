@@ -36,15 +36,24 @@ Deno.serve(async (req) => {
   if (!authHeader) return json({ error: "unauthorized" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // Identify the caller from their JWT.
-  const asUser = createClient(url, anon, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: { user }, error: userErr } = await asUser.auth.getUser();
-  if (userErr || !user) return json({ error: "unauthorized" }, 401);
+  // Identify the caller. The function is deployed with verify_jwt=true, so the
+  // gateway has already validated the token's signature — we just decode the
+  // payload to read the user id (`sub`). This avoids any dependency on the
+  // anon-key env var (which is unreliable under the new publishable-key system).
+  let uid: string | null = null;
+  try {
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const part = token.split(".")[1];
+    const b64 = part.replace(/-/g, "+").replace(/_/g, "/")
+      .padEnd(Math.ceil(part.length / 4) * 4, "=");
+    uid = JSON.parse(atob(b64)).sub ?? null;
+  } catch {
+    uid = null;
+  }
+  if (!uid) return json({ error: "unauthorized" }, 401);
+  const user = { id: uid };
 
   let deviceId: string | undefined;
   try {

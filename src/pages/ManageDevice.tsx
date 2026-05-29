@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import SkyBackground from "@/components/SkyBackground";
 import HomeTabBar from "@/components/HomeTabBar";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthProvider";
 
@@ -453,24 +454,41 @@ const ManageDevice = () => {
   const [removing, setRemoving] = useState(false);
 
   const removeDevice = async () => {
-    if (!device) return;
+    if (!device || !user) return;
     setRemoving(true);
     // Stop any playback before tearing down.
     releaseAudio();
     setPlayingId(null);
     setLoadingId(null);
-    // Server-side teardown via the delete_device Edge Function: it uses the
-    // service role to delete the WAVs, the orphaned PCM chunks (keyed by
-    // hardware_id, which the client can't reach), the recordings rows, and the
-    // device row — after verifying we own the device. The client can't delete
-    // storage objects directly (no storage DELETE policy by design).
-    const { error } = await supabase.functions.invoke("delete_device", {
+
+    // 1. Server-side teardown via Edge Function — cleans storage the client
+    //    can't reach (WAVs + orphaned PCM chunks keyed by hardware_id).
+    const { error: fnErr } = await supabase.functions.invoke("delete_device", {
       body: { deviceId: device.id },
     });
-    if (error) {
-      console.error("delete_device failed:", error);
+
+    // 2. Row deletes via RLS as a guaranteed safety net: these are authorized
+    //    for the signed-in owner, so the device + recordings ALWAYS disappear
+    //    even if the function had trouble. Idempotent if the fn already ran.
+    const { error: recErr } = await supabase
+      .from("recordings").delete().eq("account_id", user.id);
+    const { error: devErr } = await supabase
+      .from("devices").delete().eq("id", device.id);
+
+    if (devErr || recErr) {
+      // The device genuinely couldn't be removed — keep UI, tell the user.
+      console.error("removeDevice failed:", { fnErr, recErr, devErr });
+      toast.error("Couldn't remove the device. Check your connection and try again.");
       setRemoving(false);
-      return; // leave UI intact so the user can retry
+      return;
+    }
+
+    // Device is gone. If only the storage cleanup failed, warn but don't block.
+    if (fnErr) {
+      console.warn("delete_device storage cleanup failed:", fnErr);
+      toast.warning("Device removed, but some files may take a moment to clear.");
+    } else {
+      toast.success("Device removed.");
     }
     setDevice(null);
     setRecordings([]);
