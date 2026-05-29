@@ -1,18 +1,73 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Loader2, Wrench } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
+import { supabase } from "@/lib/supabase";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const isAdmin = localStorage.getItem("adminMode") === "true";
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Replace with your own auth logic
-    navigate("/");
+    setError("");
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+        if (error) throw error;
+        navigate(window.__pendingPairingQR ? "/device-setup" : "/home");
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: { full_name: form.name },
+          },
+        });
+        if (error) throw error;
+        navigate(window.__pendingPairingQR ? "/device-setup" : "/home");
+      }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (provider: "google" | "apple") => {
+    setError("");
+    const isNative = !!(window as any).__nativeSpeechBridge;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: isNative
+          ? "fct.mylegacytape://callback"
+          : window.location.origin,
+        skipBrowserRedirect: isNative,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    // In native app, Supabase returns the OAuth URL instead of redirecting.
+    // Navigate to it so the WKNavigationDelegate can intercept and open ASWebAuthenticationSession.
+    if (isNative && data?.url) {
+      window.location.href = data.url;
+    }
   };
 
   return (
@@ -38,7 +93,7 @@ const Auth = () => {
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground"
             }`}
-            onClick={() => setIsLogin(true)}
+            onClick={() => { setIsLogin(true); setError(""); }}
           >
             Log In
           </button>
@@ -48,11 +103,18 @@ const Auth = () => {
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground"
             }`}
-            onClick={() => setIsLogin(false)}
+            onClick={() => { setIsLogin(false); setError(""); }}
           >
             Sign Up
           </button>
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm text-center">
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -109,8 +171,10 @@ const Auth = () => {
 
           <button
             type="submit"
-            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm mt-2 active:opacity-80 transition-opacity shadow-sm"
+            disabled={loading}
+            className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm mt-2 active:opacity-80 transition-opacity shadow-sm flex items-center justify-center gap-2 disabled:opacity-60"
           >
+            {loading && <Loader2 className="size-4 animate-spin" />}
             {isLogin ? "Log In" : "Create Account"}
           </button>
         </form>
@@ -124,7 +188,10 @@ const Auth = () => {
 
         {/* Social buttons */}
         <div className="flex gap-3">
-          <button className="flex-1 h-12 rounded-xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center justify-center gap-2 text-sm font-medium text-foreground active:opacity-80 transition-opacity">
+          <button
+            onClick={() => handleSocialLogin("google")}
+            className="flex-1 h-12 rounded-xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center justify-center gap-2 text-sm font-medium text-foreground active:opacity-80 transition-opacity"
+          >
             <svg className="size-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -133,13 +200,27 @@ const Auth = () => {
             </svg>
             Google
           </button>
-          <button className="flex-1 h-12 rounded-xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center justify-center gap-2 text-sm font-medium text-foreground active:opacity-80 transition-opacity">
+          <button
+            onClick={() => handleSocialLogin("apple")}
+            className="flex-1 h-12 rounded-xl bg-card/80 backdrop-blur-sm border border-border/60 flex items-center justify-center gap-2 text-sm font-medium text-foreground active:opacity-80 transition-opacity"
+          >
             <svg className="size-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
             </svg>
             Apple
           </button>
         </div>
+
+        {/* Admin bypass */}
+        {isAdmin && (
+          <button
+            onClick={() => navigate("/home")}
+            className="w-full h-12 mt-4 rounded-xl border-2 border-dashed border-primary/40 text-primary font-semibold text-sm active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+          >
+            <Wrench className="size-4" />
+            Continue as Admin
+          </button>
+        )}
       </div>
     </div>
   );

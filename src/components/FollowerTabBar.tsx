@@ -10,7 +10,7 @@ const FollowerTabBar = ({ onBookView }: FollowerTabBarProps) => {
   const navigate = useNavigate();
 
   const tabs = [
-    { label: "Home", icon: Home, route: "/", action: undefined },
+    { label: "Home", icon: Home, route: "/home", action: undefined },
     { label: "Library", icon: BookOpen, route: "/dashboard", action: undefined },
     { label: "Book View", icon: Book, route: null, action: onBookView },
     { label: "Profile", icon: User, route: "/follower-profile", action: undefined },

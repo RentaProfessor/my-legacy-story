@@ -1,10 +1,12 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, User, Radio } from "lucide-react";
+import { Home, User, Radio, Mic, HardDrive } from "lucide-react";
 
 const tabs: { label: string; icon: typeof Home; route: string | null; href?: string }[] = [
-  { label: "Home", icon: Home, route: "/" },
-  { label: "Buy Device", icon: Radio, route: null, href: "https://mylegacytape.com" },
-  { label: "Profile", icon: User, route: "/creator-profile" },
+  { label: "Home",       icon: Home,      route: "/home" },
+  { label: "Record",     icon: Mic,       route: "/record" },
+  { label: "My Device",  icon: HardDrive, route: "/manage-device" },
+  { label: "Buy Device", icon: Radio,     route: null, href: "https://mylegacytape.com" },
+  { label: "Profile",    icon: User,      route: "/creator-profile" },
 ];
 
 const HomeTabBar = () => {
