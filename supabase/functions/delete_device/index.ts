@@ -20,19 +20,29 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // NOTE: recordings have no device_id, so rows/WAVs are deleted per-account
 // (fine for one-device-per-account today).
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, apikey, content-type, x-hardware-id, x-pair-token",
-};
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, "Content-Type": "application/json" },
-  });
+// This function is called from the app via supabase-js, which sends headers
+// like x-client-info / x-supabase-api-version on every request. Echo back
+// whatever the preflight asks for so the browser never blocks us (the old
+// fixed list omitted x-client-info, which silently failed the CORS preflight).
+function cors(req: Request) {
+  const requested = req.headers.get("Access-Control-Request-Headers");
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers":
+      requested ??
+      "authorization, x-client-info, apikey, content-type, x-supabase-api-version, x-hardware-id, x-pair-token",
+  };
+}
 
 Deno.serve(async (req) => {
+  const CORS = cors(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   const hwId = req.headers.get("x-hardware-id");
