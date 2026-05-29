@@ -326,9 +326,12 @@ const DeviceSetup = () => {
   // Fallback: if bleConnecting doesn't get a WiFi list within 6s, surface a soft
   // failure screen with retry instead of silently dumping the user into manual
   // SSID entry — that jump used to feel like the app broke mid-flow.
+  // 10s, comfortably past the device's WiFi scan (~3s) + its 5s scan-stall
+  // self-timeout + BLE notify latency, so a slightly slow scan resolves to the
+  // picker instead of briefly flashing "Scan Again".
   useEffect(() => {
     if (step !== "bleConnecting") return;
-    const t = setTimeout(() => setStep("bleFailed"), 6000);
+    const t = setTimeout(() => setStep("bleFailed"), 10000);
     return () => clearTimeout(t);
   }, [step]);
 
