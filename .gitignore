@@ -12,6 +12,15 @@ dist
 dist-ssr
 *.local
 
+# Secrets / env — never commit these (service-role keys, OpenAI keys, etc.)
+.env
+.env.*
+!.env.example
+# Supabase CLI local state (may contain access tokens / linked project secrets)
+supabase/.env
+supabase/.branches
+supabase/.temp
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
