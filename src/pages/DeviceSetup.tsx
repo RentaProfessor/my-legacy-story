@@ -226,9 +226,11 @@ const DeviceSetup = () => {
 
   // Detect re-pair: if this hardware_id already has a completed onboarding for
   // this user, mark the flow so we skip the survey/personInfo screens and avoid
-  // overwriting their existing answers.
+  // overwriting their existing answers. Bypassed in admin mode so every test
+  // cycle runs the full flow without having to clear the devices row first.
   const checkExistingDevice = async (hardwareId: string) => {
     if (!user) return;
+    if (isAdmin) { setIsRePair(false); return; }
     const { data } = await supabase
       .from("devices")
       .select("onboarding_complete, setup_for, subject_name, subject_dob")
@@ -381,9 +383,23 @@ const DeviceSetup = () => {
     // Reset onboarding_complete on every pair attempt — the firmware polls
     // device_status RPC and transitions Screen1→Screen2 the instant it sees
     // `true`. If a previous test left the flag set, the device would jump past
-    // the survey before the user even sees it. isRePair (read pre-upsert in
-    // checkExistingDevice) preserves the "skip the survey" intent — we write
-    // the flag back to true after re-pair done, see __onPairingStatus 0x03.
+    // the survey before the user even sees it.
+    //
+    // Two writes, deliberately:
+    //   1. An explicit UPDATE first — guaranteed to run even if some quirk of
+    //      upsert's conflict resolution skips listed fields (RLS edge case,
+    //      Postgrest version drift, etc.). Idempotent if the row doesn't exist.
+    //   2. Then the upsert, which creates the row if missing and writes all
+    //      the pair-time fields atomically.
+    //
+    // isRePair (read pre-upsert in checkExistingDevice) preserves the "skip
+    // the survey" intent in component state — we write the flag back to true
+    // after re-pair done, via the effect that watches step + isRePair.
+    await supabase
+      .from("devices")
+      .update({ onboarding_complete: false })
+      .eq("hardware_id", qrData.hardwareId);
+
     const { error: dbError } = await supabase.from("devices").upsert(
       {
         user_id: user.id,

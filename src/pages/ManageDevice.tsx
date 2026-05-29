@@ -179,6 +179,7 @@ const ManageDevice = () => {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Recording | null>(null);
+  const [confirmRemoveDevice, setConfirmRemoveDevice] = useState(false);
   const processingRef = useRef<string | null>(null);
   const [failedTranscriptions, setFailedTranscriptions] = useState<Map<string, string>>(new Map());
   const recordingsRef = useRef<Recording[]>([]);
@@ -447,6 +448,24 @@ const ManageDevice = () => {
     });
   };
 
+  const removeDevice = async () => {
+    if (!device) return;
+    // Stop any playback before nuking the rows it might reference.
+    releaseAudio();
+    setPlayingId(null);
+    setLoadingId(null);
+    // Delete all recordings for this account first — their WAV files in storage
+    // are scoped to the account, so they'd be orphans if we didn't sweep them.
+    const recsToDrop = recordings.map((r) => r.storage_path);
+    if (recsToDrop.length > 0) {
+      await supabase.storage.from("recordings").remove(recsToDrop);
+    }
+    await supabase.from("recordings").delete().eq("account_id", user!.id);
+    await supabase.from("devices").delete().eq("id", device.id);
+    setDevice(null);
+    setRecordings([]);
+  };
+
   const renameRecording = async (id: string, name: string) => {
     await supabase.from("recordings").update({ chapter_name: name }).eq("id", id);
     setRecordings((prev) =>
@@ -596,12 +615,22 @@ const ManageDevice = () => {
             )}
           </div>
 
-          <button
-            className="w-full text-[13px] text-muted-foreground py-1 border-t border-border/40 pt-2 active:opacity-60 transition-opacity text-center"
-            onClick={() => navigate("/device-setup")}
-          >
-            + Pair a different device
-          </button>
+          <div className="border-t border-border/40 pt-2 -mb-1 flex flex-col">
+            <button
+              className="w-full text-[13px] text-muted-foreground py-2 active:opacity-60 transition-opacity text-center"
+              onClick={() => navigate("/device-setup")}
+            >
+              + Pair a different device
+            </button>
+            <button
+              className="w-full text-[13px] text-destructive/80 py-2 active:opacity-60 transition-opacity text-center flex items-center justify-center gap-1.5"
+              onClick={() => setConfirmRemoveDevice(true)}
+              aria-label={`Remove ${device.hardware_id}`}
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+              Remove this device
+            </button>
+          </div>
         </div>
 
         {/* Books linked to this device */}
@@ -691,6 +720,26 @@ const ManageDevice = () => {
         )}
 
       </div>
+
+      <AlertDialog open={confirmRemoveDevice} onOpenChange={setConfirmRemoveDevice}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this device?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {device?.hardware_id} will be unpaired and all {recordings.length} recording{recordings.length === 1 ? "" : "s"} will be permanently deleted, including audio files and transcripts. This can't be undone — you'll need to scan the QR code again to re-pair.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { removeDevice(); setConfirmRemoveDevice(false); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove Device
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!deleteCandidate} onOpenChange={(open) => !open && setDeleteCandidate(null)}>
         <AlertDialogContent>
