@@ -314,6 +314,18 @@ const DeviceSetup = () => {
         if (Array.isArray(p)) { nets = p as WifiNetwork[]; parsed = true; }
       } catch { /* truncated / invalid */ }
       setWifiDebug({ bytes, count: nets.length, parsed, sample: raw.slice(0, 80) });
+      // Temp diagnostic: log exactly what arrived over BLE so we can read it
+      // server-side instead of relaying screen text. Fire-and-forget.
+      supabase.from("debug_logs").insert({
+        tag: "wifi_scan",
+        data: {
+          bytes,
+          parsed,
+          count: nets.length,
+          sample: raw.slice(0, 300),
+          hardware_id: qrData?.hardwareId ?? null,
+        },
+      }).then(() => {}, () => {});
       setWifiNetworks(nets);
       // Only land on / stay on the picker while we're still choosing. A late
       // poll result must not yank the user back from passwordEntry etc.; it
