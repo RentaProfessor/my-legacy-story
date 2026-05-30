@@ -88,6 +88,12 @@ interface Device {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Temp diagnostic: mirror transcription pipeline events to Supabase so failures
+// are readable server-side (the on-device console isn't). Remove with debug_logs.
+function logDiag(tag: string, data: Record<string, unknown>) {
+  supabase.from("debug_logs").insert({ tag, data }).then(() => {}, () => {});
+}
+
 function formatDuration(seconds: number): string {
   if (!seconds) return "";
   const m = Math.floor(seconds / 60);
@@ -273,14 +279,16 @@ const ManageDevice = () => {
     if (!next) return;
 
     processingRef.current = next.id;
-    const { data } = await supabase.storage
+    const { data, error: signErr } = await supabase.storage
       .from("recordings")
       .createSignedUrl(next.storage_path, 3600);
     if (!data?.signedUrl) {
       processingRef.current = null;
+      logDiag("transcribe", { step: "sign_failed", id: next.id, path: next.storage_path, err: signErr?.message });
       setFailedTranscriptions((prev) => new Map(prev).set(next.id, "Could not sign storage URL"));
       return;
     }
+    logDiag("transcribe", { step: "start", id: next.id, urlLen: data.signedUrl.length });
     w.__speechBridge.transcribeFile!(data.signedUrl, next.id);
   };
 
@@ -293,6 +301,7 @@ const ManageDevice = () => {
 
     w.__onFileTranscribed = async (recordingId, text) => {
       processingRef.current = null;
+      logDiag("transcribe", { step: "success", id: recordingId, textLen: text.length });
       const transcribedAt = new Date().toISOString();
       await supabase
         .from("recordings")
@@ -309,6 +318,7 @@ const ManageDevice = () => {
     w.__onFileTranscribeError = (recordingId, message) => {
       processingRef.current = null;
       console.warn(`[transcribe] ${recordingId}: ${message}`);
+      logDiag("transcribe", { step: "error", id: recordingId, message });
       setFailedTranscriptions((prev) => new Map(prev).set(recordingId, message));
       processNext();
     };
