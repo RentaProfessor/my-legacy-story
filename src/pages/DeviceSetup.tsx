@@ -194,6 +194,9 @@ const DeviceSetup = () => {
   const [chapterMode, setChapterMode] = useState<"manual" | "auto">("manual");
   // Pronouns for the AI interviewer's brain (avoids awkward "their" for one person).
   const [pronouns, setPronouns] = useState<"he" | "she" | "they" | null>(null);
+  // Gift path: does the subject answer themselves, or does the helper relay?
+  // Drives 2nd- vs 3rd-person framing in the brain. Always true on the self path.
+  const [subjectSpeaks, setSubjectSpeaks] = useState(true);
   const [chapterAutoMinutes, setChapterAutoMinutes] = useState(10);
   const [surveyAnswers, setSurveyAnswers] = useState<string[]>(Array(10).fill(""));
   const [surveyIndex, setSurveyIndex] = useState(0);
@@ -228,6 +231,7 @@ const DeviceSetup = () => {
         subject_dob: subjectDob || null,
         survey_answers: {},
         pronouns: pronouns,
+        subject_speaks: setupForValue === "other" ? subjectSpeaks : true,
         chapter_mode: chapterMode,
         chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
@@ -524,6 +528,7 @@ const DeviceSetup = () => {
         subject_dob: subjectDob || null,
         survey_answers: surveyMap,
         pronouns: pronouns,
+        subject_speaks: setupForValue === "other" ? subjectSpeaks : true,
         chapter_mode: chapterMode,
         chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
@@ -572,6 +577,7 @@ const DeviceSetup = () => {
     setSubjectDob("");
     setChapterMode("manual");
     setPronouns(null);
+    setSubjectSpeaks(true);
     setChapterAutoMinutes(10);
     setSurveyAnswers(Array(10).fill(""));
     setSurveyIndex(0);
@@ -952,6 +958,39 @@ const DeviceSetup = () => {
                 ))}
               </div>
             </div>
+            {isOther && (
+              <div>
+                <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                  Who answers the questions?
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSubjectSpeaks(true)}
+                    aria-pressed={subjectSpeaks}
+                    className={`flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      subjectSpeaks
+                        ? "bg-primary/10 text-primary border border-primary"
+                        : "bg-card/80 text-muted-foreground border border-border/60"
+                    }`}
+                  >
+                    {subjectName.trim() || "They"} answer{subjectName.trim() ? "s" : ""}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubjectSpeaks(false)}
+                    aria-pressed={!subjectSpeaks}
+                    className={`flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      !subjectSpeaks
+                        ? "bg-primary/10 text-primary border border-primary"
+                        : "bg-card/80 text-muted-foreground border border-border/60"
+                    }`}
+                  >
+                    I answer for them
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <Button
