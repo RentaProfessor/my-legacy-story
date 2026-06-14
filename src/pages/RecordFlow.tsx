@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SkyBackground from "@/components/SkyBackground";
-import BottomTabBar from "@/components/BottomTabBar";
+import AppTabBar from "@/components/AppTabBar";
 import {
   Dialog,
   DialogContent,
@@ -543,7 +543,7 @@ const RecordFlow = () => {
         </DialogContent>
       </Dialog>
 
-      <BottomTabBar />
+      <AppTabBar />
     </div>
   );
 };

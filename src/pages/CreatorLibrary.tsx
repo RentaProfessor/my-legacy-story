@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { BookOpen, ChevronRight, Loader2, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import SkyBackground from "@/components/SkyBackground";
-import BottomTabBar from "@/components/BottomTabBar";
+import AppTabBar from "@/components/AppTabBar";
 import {
   Dialog,
   DialogContent,
@@ -157,7 +157,7 @@ const CreatorLibrary = () => {
         </DialogContent>
       </Dialog>
 
-      <BottomTabBar />
+      <AppTabBar />
     </div>
   );
 };

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { User, LogOut, Bell, Shield, HelpCircle, ChevronRight, Wrench, Copy, Check, BookOpen, FileText } from "lucide-react";
+import { User, LogOut, Bell, Shield, HelpCircle, ChevronRight, Wrench, Copy, Check, BookOpen, FileText, Radio } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import HomeTabBar from "@/components/HomeTabBar";
+import AppTabBar from "@/components/AppTabBar";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/AuthProvider";
@@ -146,6 +146,15 @@ const CreatorProfile = () => {
           <Button
             variant="outline"
             className="w-full rounded-xl"
+            onClick={() => window.open("https://mylegacytape.com", "_blank", "noopener,noreferrer")}
+          >
+            <Radio className="size-4 mr-2" />
+            Buy a Device
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full rounded-xl"
             onClick={async () => { await signOut(); navigate("/"); }}
           >
             <LogOut className="size-4 mr-2" />
@@ -154,7 +163,7 @@ const CreatorProfile = () => {
         </div>
       </div>
 
-      <HomeTabBar />
+      <AppTabBar />
     </div>
   );
 };

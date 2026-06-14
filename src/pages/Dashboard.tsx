@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Eye, ArrowLeft, ArrowRight, ChevronLeft, Loader2 } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import FollowerTabBar from "@/components/FollowerTabBar";
 import {
   Dialog,
   DialogContent,
@@ -198,7 +197,6 @@ const Dashboard = () => {
           </div>
         </DialogContent>
       </Dialog>
-      <FollowerTabBar onBookView={() => allChapters.length > 0 && openBookView(0)} />
     </div>
   );
 };

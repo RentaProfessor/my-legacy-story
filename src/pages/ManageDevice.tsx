@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import SkyBackground from "@/components/SkyBackground";
-import HomeTabBar from "@/components/HomeTabBar";
+import AppTabBar from "@/components/AppTabBar";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthProvider";
@@ -556,7 +556,7 @@ const ManageDevice = () => {
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="size-8 text-primary animate-spin" />
         </div>
-        <HomeTabBar />
+        <AppTabBar />
       </div>
     );
   }
@@ -583,7 +583,7 @@ const ManageDevice = () => {
             Pair a Device
           </Button>
         </div>
-        <HomeTabBar />
+        <AppTabBar />
       </div>
     );
   }
@@ -863,7 +863,7 @@ const ManageDevice = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <HomeTabBar />
+      <AppTabBar />
     </div>
   );
 };

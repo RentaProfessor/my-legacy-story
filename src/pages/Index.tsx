@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Mic, BookOpen, BookText, Plus } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import HomeTabBar from "@/components/HomeTabBar";
+import AppTabBar from "@/components/AppTabBar";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ const Index = () => {
         <div className="flex-1" />
       </div>
 
-      <HomeTabBar />
+      <AppTabBar />
     </div>
   );
 };

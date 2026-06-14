@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { User, ArrowLeft } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import FollowerTabBar from "@/components/FollowerTabBar";
 
 const FollowerProfile = () => {
   const navigate = useNavigate();
@@ -22,7 +21,6 @@ const FollowerProfile = () => {
           <p className="text-sm mt-1">Coming soon</p>
         </div>
       </div>
-      <FollowerTabBar />
     </div>
   );
 };

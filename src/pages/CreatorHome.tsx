@@ -2,8 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Radio, Loader2 } from "lucide-react";
 import SkyBackground from "@/components/SkyBackground";
-import BottomTabBar from "@/components/BottomTabBar";
-import ModeSwitch from "@/components/ModeSwitch";
+import AppTabBar from "@/components/AppTabBar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/AuthProvider";
@@ -35,7 +34,6 @@ const CreatorHome = () => {
 
       <header className="border-b bg-card/80 backdrop-blur-md safe-top">
         <div className="px-6 py-5 flex flex-col items-center gap-3">
-          <ModeSwitch />
           <div className="text-center">
             <h1 className="text-2xl font-bold text-foreground">Welcome, {displayName}</h1>
             <p className="text-sm text-muted-foreground mt-1">Your creator dashboard</p>
@@ -120,7 +118,7 @@ const CreatorHome = () => {
         </div>
       </div>
 
-      <BottomTabBar />
+      <AppTabBar />
     </div>
   );
 };
