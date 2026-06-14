@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import SkyBackground from "@/components/SkyBackground";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthProvider";
-import { getQuestions } from "@/lib/onboardingQuestions";
+import { getQuestions, QUESTION_IDS } from "@/lib/onboardingQuestions";
 import { getProfile } from "@/lib/database";
 
 // Status bytes from the device's BLE status characteristic.
@@ -506,10 +506,11 @@ const DeviceSetup = () => {
     if (!qrData || !user) return;
     setStep("completing");
 
-    const questions = getQuestions(setupForValue ?? "self", subjectName);
+    // Key survey_answers by stable semantic id (hometown, family, …) so the AI
+    // interviewer prompts against named fields rather than positional q1..q10.
     const surveyMap: Record<string, string> = {};
-    questions.forEach((q, i) => {
-      surveyMap[`q${i + 1}`] = surveyAnswers[i] ?? "";
+    QUESTION_IDS.forEach((id, i) => {
+      surveyMap[id] = surveyAnswers[i] ?? "";
     });
 
     await supabase

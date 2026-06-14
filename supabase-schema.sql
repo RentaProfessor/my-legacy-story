@@ -247,7 +247,7 @@ create policy "Users read own recording objects"
 -- sends in x-chapter.
 alter table public.devices
   add column if not exists chapter_mode text not null default 'manual'
-    check (chapter_mode in ('manual','auto')),
+    check (chapter_mode in ('manual','auto','ai')),
   add column if not exists chapter_auto_minutes int not null default 10;
 
 -- device_config — like device_status but also returns the chapter settings.

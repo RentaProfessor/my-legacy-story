@@ -35,6 +35,11 @@ export const OTHER_QUESTIONS: SurveyQuestion[] = [
   { id: "share",        text: "What's a story or lesson {name} most wants preserved for the people they love?" },
 ];
 
+// Stable semantic keys for survey_answers (same for self/other paths).
+// devices.survey_answers is keyed by these, e.g. { hometown: "...", family: "..." },
+// so consumers (the AI interviewer) prompt against named fields, not positions.
+export const QUESTION_IDS = SELF_QUESTIONS.map((q) => q.id);
+
 /**
  * Returns the 10 question strings for a given path, with `{name}` replaced.
  * Falls back to "them" if name is empty.
