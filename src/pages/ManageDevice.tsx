@@ -67,6 +67,7 @@ interface Recording {
   duration_seconds: number;
   transcription: string | null;
   transcribed_at: string | null;
+  ai_question_text: string | null;
   created_at: string;
 }
 
@@ -1066,10 +1067,18 @@ const RecordingCard = ({
         </button>
       </div>
 
-      {/* Transcript text */}
+      {/* Transcript text — for AI-interview recordings, show the question above
+          the answer. ai_question_text is snapshotted per-recording by the device,
+          so toggling the setting later never rewrites past chapters. */}
       {expanded && rec.transcription && (
-        <div className="border-t border-border/40 px-4 py-3">
+        <div className="border-t border-border/40 px-4 py-3 space-y-1.5">
+          {rec.ai_question_text && (
+            <p className="text-[13px] text-foreground/90 leading-relaxed">
+              <span className="font-semibold text-primary">Q:</span> {rec.ai_question_text}
+            </p>
+          )}
           <p className="text-[13px] text-muted-foreground leading-relaxed">
+            {rec.ai_question_text && <span className="font-semibold text-foreground/70">A: </span>}
             {rec.transcription}
           </p>
         </div>

@@ -192,6 +192,8 @@ const DeviceSetup = () => {
   // The device polls device_config to learn this; also changeable later in
   // Manage Device settings.
   const [chapterMode, setChapterMode] = useState<"manual" | "auto">("manual");
+  // Pronouns for the AI interviewer's brain (avoids awkward "their" for one person).
+  const [pronouns, setPronouns] = useState<"he" | "she" | "they" | null>(null);
   const [chapterAutoMinutes, setChapterAutoMinutes] = useState(10);
   const [surveyAnswers, setSurveyAnswers] = useState<string[]>(Array(10).fill(""));
   const [surveyIndex, setSurveyIndex] = useState(0);
@@ -225,6 +227,7 @@ const DeviceSetup = () => {
         subject_name: subjectName.trim() || "Test User",
         subject_dob: subjectDob || null,
         survey_answers: {},
+        pronouns: pronouns,
         chapter_mode: chapterMode,
         chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
@@ -520,6 +523,7 @@ const DeviceSetup = () => {
         subject_name: subjectName.trim() || null,
         subject_dob: subjectDob || null,
         survey_answers: surveyMap,
+        pronouns: pronouns,
         chapter_mode: chapterMode,
         chapter_auto_minutes: chapterAutoMinutes,
         onboarding_complete: true,
@@ -567,6 +571,7 @@ const DeviceSetup = () => {
     setSubjectName("");
     setSubjectDob("");
     setChapterMode("manual");
+    setPronouns(null);
     setChapterAutoMinutes(10);
     setSurveyAnswers(Array(10).fill(""));
     setSurveyIndex(0);
@@ -919,6 +924,33 @@ const DeviceSetup = () => {
                 className="rounded-xl"
                 max={new Date().toISOString().split("T")[0]}
               />
+            </div>
+            <div>
+              <label className="text-[13px] font-medium text-muted-foreground mb-1.5 block">
+                {isOther ? "Their pronouns" : "Your pronouns"}
+                <span className="text-muted-foreground/60 ml-1">(optional)</span>
+              </label>
+              <div className="flex gap-2">
+                {([
+                  { v: "he", label: "He/him" },
+                  { v: "she", label: "She/her" },
+                  { v: "they", label: "They/them" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setPronouns(pronouns === opt.v ? null : opt.v)}
+                    aria-pressed={pronouns === opt.v}
+                    className={`flex-1 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all ${
+                      pronouns === opt.v
+                        ? "bg-primary/10 text-primary border border-primary"
+                        : "bg-card/80 text-muted-foreground border border-border/60"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
